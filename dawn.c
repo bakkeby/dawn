@@ -2564,7 +2564,8 @@ setfullscreen(Client *c, int fullscreen, int restorefakefullscreen)
 			arrangemon(c->mon);
 			restack(c->mon);
 		}
-	}
+	} else
+		resizeclient(c, c->x, c->y, c->w, c->h);
 }
 
 void
