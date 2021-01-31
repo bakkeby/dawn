@@ -503,7 +503,7 @@ static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
 
-#include "patch/include.h"
+#include "lib/include.h"
 
 /* variables */
 static const char broken[] = "fubar";
@@ -552,7 +552,7 @@ static Window root, wmcheckwin;
 /* configuration, allows nested code to access above variables */
 #include "config.h"
 
-#include "patch/include.c"
+#include "lib/include.c"
 
 /* compile-time check if all tags fit into an unsigned int bit array. */
 struct NumTags { char limitexceeded[NUMTAGS > 31 ? -1 : 1]; };

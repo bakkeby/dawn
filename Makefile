@@ -28,7 +28,7 @@ dawn: ${OBJ}
 	${CC} -o $@ ${OBJ} ${LDFLAGS}
 
 dawnc:
-	${CC} -o $@ patch/ipc/dawnc.c ${LDFLAGS}
+	${CC} -o $@ lib/ipc/dawnc.c ${LDFLAGS}
 
 clean:
 	rm -f dawn ${OBJ} dawn-${VERSION}.tar.gz
