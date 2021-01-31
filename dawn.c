@@ -503,8 +503,6 @@ static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
 
-/* bar functions */
-
 #include "patch/include.h"
 
 /* variables */
@@ -1268,9 +1266,11 @@ void
 detach(Client *c)
 {
 	Client **tc;
-
+	c->id = 0;
 	for (tc = &c->mon->clients; *tc && *tc != c; tc = &(*tc)->next);
 	*tc = c->next;
+	c->next = NULL;
+	c->snext = NULL;
 }
 
 void
@@ -2422,7 +2422,6 @@ sendmon(Client *c, Monitor *m)
 	detachstack(c);
 	arrange(c->mon);
 	c->mon = m;
-	c->id = 0;
 
 	if (!(c->tags & SPTAGMASK))
 		c->tags = m->tagset[m->seltags]; /* assign tags of target monitor */
