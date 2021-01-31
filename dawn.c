@@ -193,7 +193,8 @@ enum {
 
 enum {
 	IsFloating,
-	DawnClientFlags,
+	DawnClientFlags1,
+	DawnClientFlags2,
 	DawnClientTags,
 	SteamGame,
 	ClientLast
@@ -565,7 +566,6 @@ applyrules(Client *c)
 	Atom wintype, game_id;
 	char role[64];
 	unsigned int i;
-	unsigned int newtagset;
 	const Rule *r;
 	Monitor *m;
 	XClassHint ch = { NULL, NULL };
@@ -612,22 +612,6 @@ applyrules(Client *c)
 
 			if (ISFLOATING(c) && r->floatpos)
 				setfloatpos(c, r->floatpos);
-
-			if ((SWITCHTAG(c) || ENABLETAG(c)) && (NOSWALLOW(c) || !termforwin(c))) {
-				selmon = c->mon;
-				newtagset = SWITCHTAG(c) ? c->tags : c->mon->tagset[c->mon->seltags] | c->tags;
-
-				/* Switch to the client's tag, but only if that tag is not already shown */
-				if (newtagset && !(c->tags & c->mon->tagset[c->mon->seltags])) {
-					if (REVERTTAG(c))
-						c->reverttags = c->mon->tagset[c->mon->seltags];
-					if (SWITCHTAG(c)) {
-						viewmon(selmon, &((Arg) { .ui = newtagset }));
-					} else {
-						c->mon->tagset[c->mon->seltags] = newtagset;
-					}
-				}
-			}
 
 			if (enabled(Debug))
 				fprintf(stderr, "applyrules: client rule %d matched:\n    class: %s\n    role: %s\n    instance: %s\n    title: %s\n    wintype: %s\n    tags: %d\n    flags: %ld\n    floatpos: %s\n    monitor: %d\n",
@@ -1791,6 +1775,7 @@ manage(Window w, XWindowAttributes *wa)
 {
 	Client *c, *t = NULL;
 	Client *term = NULL;
+	Monitor *m = NULL;
 	Window trans = None;
 	XWindowChanges wc;
 	int focusclient = 1;
@@ -1898,13 +1883,21 @@ manage(Window w, XWindowAttributes *wa)
 	XChangeProperty(dpy, c->win, netatom[NetWMAllowedActions], XA_ATOM, 32,
 		PropModeReplace, (unsigned char *) allowed, NetWMActionLast);
 
-	attachx(c);
-	if (focusclient)
-		attachstack(c);
-	else {
-		c->snext = c->mon->sel->snext;
-		c->mon->sel->snext = c;
+	/* Do not attach client if it is being swallowed */
+	if (term && swallow(term, c)) {
+		/* Do not let swallowed client steal focus unless the terminal has focus */
+		focusclient = (term == selmon->sel);
+	} else {
+		attachx(c);
+
+		if (focusclient || !c->mon->sel || !c->mon->stack)
+			attachstack(c);
+		else {
+			c->snext = c->mon->sel->snext;
+			c->mon->sel->snext = c;
+		}
 	}
+
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
 		(unsigned char *) &(c->win), 1);
 	XChangeProperty(dpy, root, netatom[NetClientListStacking], XA_WINDOW, 32, PropModePrepend,
@@ -1915,15 +1908,39 @@ manage(Window w, XWindowAttributes *wa)
 		hide(c);
 	if (!HIDDEN(c))
 		setclientstate(c, NormalState);
-	if (c->mon == selmon)
-		unfocus(selmon->sel, 0, c);
-	if (focusclient)
-		c->mon->sel = c;
-	if (!(term && swallow(term, c))) {
-		arrange(c->mon);
-		if (!HIDDEN(c))
-			XMapWindow(dpy, c->win);
+
+	m = c->mon;
+
+	if ((SWITCHTAG(c) || ENABLETAG(c)) && !c->swallowing && c->tags && !(c->tags & c->mon->tagset[c->mon->seltags])) {
+		selmon = c->mon;
+		if (REVERTTAG(c))
+			c->reverttags = c->mon->tagset[c->mon->seltags];
+		if (SWITCHTAG(c)) {
+			if (enabled(Desktop))
+				for (m = mons; m; m = m->next)
+					viewmon(m, &((Arg) { .ui = c->tags }));
+			else
+				viewmon(m, &((Arg) { .ui = c->tags }));
+		}
+		else if (ENABLETAG(c)) {
+			if (enabled(Desktop))
+				for (m = mons; m; m = m->next)
+					m->tagset[m->seltags] = m->tagset[m->seltags] | c->tags;
+			else
+				m->tagset[m->seltags] = m->tagset[m->seltags] | c->tags;
+		}
 	}
+
+	if (focusclient) {
+		if (c->mon == selmon)
+			unfocus(selmon->sel, 0, c);
+		c->mon->sel = c;
+	}
+
+	arrange(m);
+	if (!HIDDEN(c))
+		XMapWindow(dpy, c->win);
+
 	if (focusclient)
 		focus(NULL);
 	setfloatinghint(c);
@@ -2655,7 +2672,8 @@ setup(void)
 	wmatom[WMWindowRole] = XInternAtom(dpy, "WM_WINDOW_ROLE", False);
 	wmatom[WMChangeState] = XInternAtom(dpy, "WM_CHANGE_STATE", False);
 	clientatom[IsFloating] = XInternAtom(dpy, "_IS_FLOATING", False);
-	clientatom[DawnClientFlags] = XInternAtom(dpy, "_DAWN_CLIENT_FLAGS", False);
+	clientatom[DawnClientFlags1] = XInternAtom(dpy, "_DAWN_CLIENT_FLAGS1", False);
+	clientatom[DawnClientFlags2] = XInternAtom(dpy, "_DAWN_CLIENT_FLAGS2", False);
 	clientatom[DawnClientTags] = XInternAtom(dpy, "_DAWN_CLIENT_TAGS", False);
 	clientatom[SteamGame] = XInternAtom(dpy, "STEAM_GAME", False);
 	netatom[NetActiveWindow] = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);

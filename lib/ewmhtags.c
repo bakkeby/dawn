@@ -15,6 +15,10 @@ persistmonitorstate(Monitor *m)
 		c->id = i;
 		setclientflags(c);
 		setclienttags(c);
+		if (c->swallowing) {
+			setclientflags(c->swallowing);
+			setclientfields(c->swallowing);
+		}
 	}
 
 	XSync(dpy, False);
@@ -51,6 +55,11 @@ setclientflags(Client *c)
 {
 	unsigned long data[] = { c->flags };
 	XChangeProperty(dpy, c->win, clientatom[DawnClientFlags], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
+
+	unsigned long data1[] = { c->flags & 0xFFFFFFFF };
+	unsigned long data2[] = { c->flags >> 32 };
+	XChangeProperty(dpy, c->win, clientatom[DawnClientFlags1], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data1, 1);
+	XChangeProperty(dpy, c->win, clientatom[DawnClientFlags2], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data2, 1);
 }
 
 void
@@ -63,9 +72,11 @@ setclienttags(Client *c)
 void
 getclientflags(Client *c)
 {
-	Atom flags = getatomprop(c, clientatom[DawnClientFlags], AnyPropertyType);
-	if (flags)
-		c->flags |= flags;
+	unsigned long flags1 = getatomprop(c, clientatom[DawnClientFlags1], AnyPropertyType) & 0xFFFFFFFF;
+	unsigned long flags2 = getatomprop(c, clientatom[DawnClientFlags2], AnyPropertyType);
+
+	if (flags1 || flags2)
+		c->flags = flags1 | (flags2 << 32);
 }
 
 void
