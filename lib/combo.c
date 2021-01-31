@@ -9,34 +9,20 @@ keyrelease(XEvent *e)
 void
 combotag(const Arg *arg)
 {
-	Monitor *m;
-	if (!(selmon->sel && arg->ui & TAGMASK))
+	Monitor *m = selmon;
+	if (!(m->sel && arg->ui & TAGMASK))
 		return;
 
-	if (enabled(Desktop)) {
-		for (m = mons; m; m = m->next)
-			combotagmon(m, arg);
-		focus(NULL);
-		arrange(NULL);
-	} else {
-		combotagmon(selmon, arg);
-		focus(NULL);
-		arrange(selmon);
-	}
-	combo = 1;
-}
-
-void
-combotagmon(Monitor *m, const Arg *arg)
-{
 	if (m->sel->reverttags)
 		m->sel->reverttags = 0;
 	if (combo)
 		m->sel->tags |= arg->ui & TAGMASK;
 	else
 		m->sel->tags = arg->ui & TAGMASK;
+	focus(NULL);
+	arrange(m);
+	combo = 1;
 }
-
 
 void
 comboview(const Arg *arg)
