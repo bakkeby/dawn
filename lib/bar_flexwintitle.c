@@ -228,9 +228,14 @@ flextitledraw(Monitor *m, Client *c, int unused, int x, int w, int tabscheme, Ar
 {
 	if (!c)
 		return;
+
 	int i, nclienttags = 0, nviewtags = 0, pad = lrpad / 2;
 	int clientscheme = (
-		c == selmon->sel
+		c->scratchkey != 0 && c == selmon->sel
+		? SchemeScratchSel
+		: c->scratchkey != 0
+		? SchemeScratchNorm
+		: c == selmon->sel
 		? getselschemefor(tabscheme)
 		: HIDDEN(c)
 		? SchemeHid

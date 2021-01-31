@@ -22,6 +22,8 @@
     yajl_gen_map_close(gen);                                                   \
   }
 
+int dump_settings(yajl_gen gen);
+
 int dump_tag(yajl_gen gen, const char *name, const int tag_mask);
 
 int dump_tags(yajl_gen gen, int tags_len);

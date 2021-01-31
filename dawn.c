@@ -67,10 +67,7 @@
 #define WIDTH(X)                ((X)->w + 2 * (X)->bw)
 #define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
 #define WTYPE                   "_NET_WM_WINDOW_TYPE_"
-#define TOTALTAGS               (NUMTAGS + LENGTH(scratchpads))
-#define TAGMASK                 ((1 << TOTALTAGS) - 1)
-#define SPTAG(i)                ((1 << NUMTAGS) << (i))
-#define SPTAGMASK               (((1 << LENGTH(scratchpads))-1) << NUMTAGS)
+#define TAGMASK                 ((1 << NUMTAGS) - 1)
 #define TEXTWM(X)               (drw_fontset_getwidth(drw, (X), True) + lrpad)
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X), False) + lrpad)
 #define HIDDEN(C)               ((getstate(C->win) == IconicState))
@@ -99,6 +96,8 @@ enum {
 	SchemeTagsSel,
 	SchemeHid,
 	SchemeUrg,
+	SchemeScratchNorm,
+	SchemeScratchSel,
 	SchemeFlexActTTB,
 	SchemeFlexActLTR,
 	SchemeFlexActMONO,
@@ -308,6 +307,7 @@ struct Client {
 	int oldx, oldy, oldw, oldh;
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
+	char scratchkey;
 	unsigned int id;
 	unsigned int tags;
 	unsigned int reverttags; /* holds the original tag info from when the client was opened */
@@ -390,6 +390,7 @@ typedef struct {
 	unsigned long flags;
 	const char *floatpos;
 	int monitor;
+	const char scratchkey;
 } Rule;
 
 #define RULE(...) { .monitor = -1, ##__VA_ARGS__ },
@@ -456,6 +457,7 @@ static void quit(const Arg *arg);
 static Monitor *recttomon(int x, int y, int w, int h);
 static void resize(Client *c, int x, int y, int w, int h, int interact);
 static void resizeclient(Client *c, int x, int y, int w, int h);
+static void resizeclientpad(Client *c, int x, int y, int w, int h, int xpad, int ypad);
 static void resizemouse(const Arg *arg);
 static void restack(Monitor *m);
 static void run(void);
@@ -595,10 +597,12 @@ applyrules(Client *c)
 		&& (!r->wintype || wintype == XInternAtom(dpy, r->wintype, False)))
 		{
 			c->flags |= Ruled | r->flags;
+			c->scratchkey = r->scratchkey;
+
 			if (r->tags & TAGMASK)
 				c->tags = r->tags;
 
-			if ((r->tags & SPTAGMASK) && ISFLOATING(c)) {
+			if ((r->tags & TAGMASK) && ISFLOATING(c)) {
 				c->x = c->mon->wx + (c->mon->ww / 2 - WIDTH(c) / 2);
 				c->y = c->mon->wy + (c->mon->wh / 2 - HEIGHT(c) / 2);
 			}
@@ -614,7 +618,7 @@ applyrules(Client *c)
 				setfloatpos(c, r->floatpos);
 
 			if (enabled(Debug))
-				fprintf(stderr, "applyrules: client rule %d matched:\n    class: %s\n    role: %s\n    instance: %s\n    title: %s\n    wintype: %s\n    tags: %d\n    flags: %ld\n    floatpos: %s\n    monitor: %d\n",
+				fprintf(stderr, "applyrules: client rule %d matched:\n    class: %s\n    role: %s\n    instance: %s\n    title: %s\n    wintype: %s\n    tags: %d\n    flags: %ld\n    floatpos: %s\n    monitor: %d\n    scratchkey: %d\n",
 					i,
 					r->class ? r->class : "NULL",
 					r->role ? r->role : "NULL",
@@ -624,7 +628,8 @@ applyrules(Client *c)
 					r->tags,
 					r->flags,
 					r->floatpos ? r->floatpos : "NULL",
-					r->monitor);
+					r->monitor,
+					r->scratchkey);
 			break; // only allow one rule match
 		}
 	}
@@ -668,7 +673,7 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 		*h = bh;
 	if (*w < bh)
 		*w = bh;
-	if (!IGNORESIZEHINTS(c) && (resizehints || ISFLOATING(c) || !c->mon->lt[c->mon->sellt]->arrange)) {
+	if (!IGNORESIZEHINTS(c) && (enabled(ResizeHints) || RESPECTSIZEHINTS(c) || ISFLOATING(c) || !c->mon->lt[c->mon->sellt]->arrange)) {
 		/* see last two sentences in ICCCM 4.1.2.3 */
 		baseismin = c->basew == c->minw && c->baseh == c->minh;
 		if (!baseismin) { /* temporarily remove base dimensions */
@@ -1254,7 +1259,6 @@ detach(Client *c)
 	for (tc = &c->mon->clients; *tc && *tc != c; tc = &(*tc)->next);
 	*tc = c->next;
 	c->next = NULL;
-	c->snext = NULL;
 }
 
 void
@@ -1269,6 +1273,7 @@ detachstack(Client *c)
 		for (t = c->mon->stack; t && !ISVISIBLE(t); t = t->snext);
 		c->mon->sel = t;
 	}
+	c->snext = NULL;
 }
 
 Monitor *
@@ -1795,7 +1800,7 @@ manage(Window w, XWindowAttributes *wa)
 
 	updatetitle(c);
 	getclientflags(c);
-	getclienttags(c);
+	getclientfields(c);
 	getclientopacity(c);
 
 	if (!c->mon) {
@@ -1808,8 +1813,8 @@ manage(Window w, XWindowAttributes *wa)
 			c->mon = selmon;
 		}
 	}
-	if (!c->tags)
-		c->tags = (c->mon->tagset[c->mon->seltags] & ~SPTAGMASK);
+	if (!c->tags && !c->scratchkey)
+		c->tags = (c->mon->tagset[c->mon->seltags]);
 
 	if (!RULED(c)) {
 		if (c->x == c->mon->wx && c->y == c->mon->wy)
@@ -1828,14 +1833,16 @@ manage(Window w, XWindowAttributes *wa)
 	if (c->opacity)
 		opacity(c, c->opacity);
 
-	if (c->x + WIDTH(c) > c->mon->mx + c->mon->mw)
-		c->x = c->mon->mx + c->mon->mw - WIDTH(c);
-	if (c->y + HEIGHT(c) > c->mon->my + c->mon->mh)
-		c->y = c->mon->my + c->mon->mh - HEIGHT(c);
-	c->x = MAX(c->x, c->mon->mx);
+	m = c->mon;
+
+	if (c->x + WIDTH(c) > m->mx + m->mw)
+		c->x = m->mx + m->mw - WIDTH(c);
+	if (c->y + HEIGHT(c) > m->my + c->mon->mh)
+		c->y = m->my + m->mh - HEIGHT(c);
+	c->x = MAX(c->x, m->mx);
 	/* only fix client y-offset, if the client center might cover the bar */
-	c->y = MAX(c->y, ((c->mon->bar->by == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
-		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? bh : c->mon->my);
+	c->y = MAX(c->y, ((m->bar->by == m->my) && (c->x + (c->w / 2) >= m->wx)
+		&& (c->x + (c->w / 2) < m->wx + m->ww)) ? bh : m->my);
 
 	wc.border_width = c->bw;
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
@@ -1857,8 +1864,8 @@ manage(Window w, XWindowAttributes *wa)
 			c->x = t->x + WIDTH(t) / 2 - WIDTH(c) / 2;
 			c->y = t->y + HEIGHT(t) / 2 - HEIGHT(c) / 2;
 		} else {
-			c->x = c->mon->wx + (c->mon->ww - WIDTH(c)) / 2;
-			c->y = c->mon->wy + (c->mon->wh - HEIGHT(c)) / 2;
+			c->x = m->wx + (m->ww - WIDTH(c)) / 2;
+			c->y = m->wy + (m->wh - HEIGHT(c)) / 2;
 		}
 	}
 
@@ -1875,10 +1882,8 @@ manage(Window w, XWindowAttributes *wa)
 	if (!ISFLOATING(c) && (ISFIXED(c) || WASFLOATING(c) || getatomprop(c, clientatom[IsFloating], AnyPropertyType)))
 		SETFLOATING(c);
 
-	if (ISFLOATING(c)) {
+	if (ISFLOATING(c))
 		XRaiseWindow(dpy, c->win);
-		XSetWindowBorder(dpy, w, scheme[SchemeNorm][ColFloat].pixel);
-	}
 
 	XChangeProperty(dpy, c->win, netatom[NetWMAllowedActions], XA_ATOM, 32,
 		PropModeReplace, (unsigned char *) allowed, NetWMActionLast);
@@ -1890,11 +1895,11 @@ manage(Window w, XWindowAttributes *wa)
 	} else {
 		attachx(c);
 
-		if (focusclient || !c->mon->sel || !c->mon->stack)
+		if (focusclient || !m->sel || !m->stack)
 			attachstack(c);
 		else {
-			c->snext = c->mon->sel->snext;
-			c->mon->sel->snext = c;
+			c->snext = m->sel->snext;
+			m->sel->snext = c;
 		}
 	}
 
@@ -1909,12 +1914,10 @@ manage(Window w, XWindowAttributes *wa)
 	if (!HIDDEN(c))
 		setclientstate(c, NormalState);
 
-	m = c->mon;
-
-	if ((SWITCHTAG(c) || ENABLETAG(c)) && !c->swallowing && c->tags && !(c->tags & c->mon->tagset[c->mon->seltags])) {
-		selmon = c->mon;
+	if ((SWITCHTAG(c) || ENABLETAG(c)) && !c->swallowing && c->tags && !(c->tags & m->tagset[m->seltags])) {
+		selmon = m;
 		if (REVERTTAG(c))
-			c->reverttags = c->mon->tagset[c->mon->seltags];
+			c->reverttags = m->tagset[m->seltags];
 		if (SWITCHTAG(c)) {
 			if (enabled(Desktop))
 				for (m = mons; m; m = m->next)
@@ -1937,7 +1940,7 @@ manage(Window w, XWindowAttributes *wa)
 		c->mon->sel = c;
 	}
 
-	arrange(m);
+	arrange(m); // m is inentionally NULL if switchtag or enabletag
 	if (!HIDDEN(c))
 		XMapWindow(dpy, c->win);
 
@@ -2068,10 +2071,6 @@ movemouse(const Arg *arg)
 	} while (ev.type != ButtonRelease);
 	XUngrabPointer(dpy, CurrentTime);
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
-		if (c->tags & SPTAGMASK) {
-			c->mon->tagset[c->mon->seltags] ^= (c->tags & SPTAGMASK);
-			m->tagset[m->seltags] |= (c->tags & SPTAGMASK);
-		}
 		sendmon(c, m);
 		selmon = m;
 		focus(NULL);
@@ -2202,14 +2201,21 @@ recttomon(int x, int y, int w, int h)
 }
 
 void
-resize(Client *c, int x, int y, int w, int h, int interact)
+resize(Client *c, int tx, int ty, int tw, int th, int interact)
 {
-	if (applysizehints(c, &x, &y, &w, &h, interact))
-		resizeclient(c, x, y, w, h);
+	int wh = tw, hh = th;
+	if (applysizehints(c, &tx, &ty, &wh, &hh, interact))
+		resizeclientpad(c, tx, ty, wh, hh, tw, th);
 }
 
 void
 resizeclient(Client *c, int x, int y, int w, int h)
+{
+	resizeclientpad(c, x, y, w, h, w, h);
+}
+
+void
+resizeclientpad(Client *c, int x, int y, int w, int h, int tw, int th)
 {
 	XWindowChanges wc;
 
@@ -2224,6 +2230,18 @@ resizeclient(Client *c, int x, int y, int w, int h)
 	c->w = wc.width = w;
 	c->h = wc.height = h;
 	wc.border_width = c->bw;
+
+	if (enabled(CenterSizeHintsClients) && !ISFLOATING(c)) {
+		if (w != tw) {
+			wc.x += (tw - w) / 2;
+			c->w = tw;
+		}
+		if (h != th) {
+			wc.y += (th - h) / 2;
+			c->h = th;
+		}
+	}
+
 	if (enabled(NoBorders) && ((nexttiled(c->mon->clients) == c && !nexttiled(c->next)))
 		&& (ISFAKEFULLSCREEN(c) || !ISFULLSCREEN(c))
 		&& !ISFLOATING(c)
@@ -2302,7 +2320,7 @@ resizemouse(const Arg *arg)
 					togglefloating(NULL);
 			}
 			if (!selmon->lt[selmon->sellt]->arrange || ISFLOATING(c)) {
-				resizeclient(c, nx, ny, nw, nh);
+				resize(c, nx, ny, nw, nh, 1);
 				if (enabled(AutoSaveFloats))
 					savefloats(NULL);
 			}
@@ -2313,10 +2331,6 @@ resizemouse(const Arg *arg)
 	XUngrabPointer(dpy, CurrentTime);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
-		if (c->tags & SPTAGMASK) {
-			c->mon->tagset[c->mon->seltags] ^= (c->tags & SPTAGMASK);
-			m->tagset[m->seltags] |= (c->tags & SPTAGMASK);
-		}
 		sendmon(c, m);
 		selmon = m;
 		focus(NULL);
@@ -2439,9 +2453,7 @@ sendmon(Client *c, Monitor *m)
 	detachstack(c);
 	arrange(c->mon);
 	c->mon = m;
-
-	if (!(c->tags & SPTAGMASK))
-		c->tags = m->tagset[m->seltags]; /* assign tags of target monitor */
+	c->tags = m->tagset[m->seltags]; /* assign tags of target monitor */
 	attachx(c);
 	attachstack(c);
 	arrange(m);
@@ -2789,19 +2801,6 @@ showhide(Client *c)
 	if (!c)
 		return;
 	if (ISVISIBLE(c)) {
-		if (
-			(c->tags & SPTAGMASK) &&
-			ISFLOATING(c) &&
-			(
-				c->x < c->mon->mx ||
-				c->x > c->mon->mx + c->mon->mw ||
-				c->y < c->mon->my ||
-				c->y > c->mon->my + c->mon->mh
-			)
-		) {
-			c->x = c->mon->wx + (c->mon->ww / 2 - WIDTH(c) / 2);
-			c->y = c->mon->wy + (c->mon->wh / 2 - HEIGHT(c) / 2);
-		}
 		/* show clients top down */
 		if (!c->mon->lt[c->mon->sellt]->arrange && c->sfx != -9999 && !ISFULLSCREEN(c)) {
 			XMoveWindow(dpy, c->win, c->sfx, c->sfy);
@@ -2819,6 +2818,10 @@ showhide(Client *c)
 			resize(c, c->x, c->y, c->w, c->h, 0);
 		showhide(c->snext);
 	} else {
+		/* optional: auto-hide scratchpads when moving to other tags */
+		if (enabled(AutoHideScratchpads) && c->scratchkey != 0 && !(c->tags & c->mon->tagset[c->mon->seltags]))
+			c->tags = 0;
+
 		/* hide clients bottom up */
 		showhide(c->snext);
 		XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
@@ -3129,7 +3132,7 @@ toggleviewmon(Monitor *m, const Arg *arg)
 	if (newtagset) {
 		m->tagset[m->seltags] = newtagset;
 
-		if (newtagset == ~SPTAGMASK) {
+		if (newtagset == ~0) {
 			m->pertag->prevtag = m->pertag->curtag;
 			m->pertag->curtag = 0;
 		}
@@ -3170,23 +3173,16 @@ unfocus(Client *c, int setfocus, Client *nextfocus)
 void
 unmanage(Client *c, int destroyed)
 {
+	Client *s;
 	Monitor *m = c->mon;
 	unsigned int reverttags = c->reverttags;
 	XWindowChanges wc;
 
-	if (c->swallowing) {
+	if (c->swallowing)
 		unswallow(c);
-		return;
-	}
 
-	Client *s = swallowingclient(c->win);
-	if (s) {
-		free(s->swallowing);
+	if ((s = swallowingclient(c->win)))
 		s->swallowing = NULL;
-		arrange(m);
-		focus(NULL);
-		return;
-	}
 
 	detach(c);
 	detachstack(c);
@@ -3454,10 +3450,10 @@ updatesizehints(Client *c)
 		c->maxh = size.max_height;
 	} else
 		c->maxw = c->maxh = 0;
-	if (size.flags & PMinSize) {
+	if (!IGNOREMINIMUMSIZEHINTS(c) && size.flags & PMinSize) {
 		c->minw = size.min_width;
 		c->minh = size.min_height;
-	} else if (size.flags & PBaseSize) {
+	} else if (!IGNOREMINIMUMSIZEHINTS(c) && size.flags & PBaseSize) {
 		c->minw = size.base_width;
 		c->minh = size.base_height;
 	} else
@@ -3521,12 +3517,9 @@ updatewmhints(Client *c)
 		} else
 			setflag(c, Urgent, wmh->flags & XUrgencyHint);
 
-		if (ISURGENT(c)) {
-			if (ISFLOATING(c))
-				XSetWindowBorder(dpy, c->win, scheme[SchemeUrg][ColFloat].pixel);
-			else
-				XSetWindowBorder(dpy, c->win, scheme[SchemeUrg][ColBorder].pixel);
-		}
+		if (ISURGENT(c))
+			XSetWindowBorder(dpy, c->win, scheme[SchemeUrg][ColBorder].pixel);
+
 		setflag(c, NeverFocus, wmh->flags & InputHint ? !wmh->input : 0);
 		XFree(wmh);
 	}
@@ -3564,7 +3557,7 @@ viewmon(Monitor *m, const Arg *arg)
 	if (arg->ui & TAGMASK) {
 		m->pertag->prevtag = m->pertag->curtag;
 		m->tagset[m->seltags] = arg->ui & TAGMASK;
-		if (arg->ui == ~SPTAGMASK)
+		if (arg->ui == ~0)
 			m->pertag->curtag = 0;
 		else {
 			for (i = 0; !(arg->ui & 1 << i); i++) ;

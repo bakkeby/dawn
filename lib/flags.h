@@ -1,34 +1,31 @@
-// static int hadflag(Client *c, const unsigned int flag);
-// static int hasflag(Client *c, const unsigned int flag);
 static void addflag(Client *c, const unsigned long flag);
 static void setflag(Client *c, const unsigned long flag, const int value);
-// static void setflags(Client *c, const unsigned int flags);
 static void removeflag(Client *c, const unsigned long flag);
 
 static const unsigned long
-	Ruled = 0x1, // indicates whether client was subject to client rules (used internally to determine default behaviour)
-	Fixed = 0x2,
-	Floating = 0x4,
-	Urgent = 0x8,
-	NeverFocus = 0x10,
-	FullScreen = 0x20,
-	FakeFullScreen = 0x40,
-	RestoreFakeFullScreen = 0x80,
-	Centered = 0x100,
-	Permanent = 0x200, // client can't be killed
-	Sticky = 0x400, // client shows on all tags
-	Hidden = 0x800,
-	Terminal = 0x1000,
-	NoSwallow = 0x2000,
+	AlwaysOnTop = 0x1, // client window is intended to always display on top (even above floating windows)
+	Fixed = 0x2, // used when client has a fixed size where width equals height
+	Floating = 0x4, // the client is floating (i.e. not tiled)
+	Urgent = 0x8, // indicates that the client urgently needs attention
+	NeverFocus = 0x10, // indicates that the client should never receive focus
+	FullScreen = 0x20, // indicates that the client is in fullscreen mode
+	FakeFullScreen = 0x40, // indicates that the client is in fake fullscreen mode
+	RestoreFakeFullScreen = 0x80, // internal flag that indicates that fake fullscreen should be restored when exiting actual fullscreen
+	Centered = 0x100, // indicates that the client, if floating, should be centered on the screen on launch
+	Permanent = 0x200, // if a client is permanent, then the client can't be killed
+	Hidden = 0x400, // indicates that the client should be hidden (iconic state) on launch
+	Sticky = 0x800, // TODO remove? yajl dumps dependency
+	Terminal = 0x1000, // indicates that the client is a terminal, used by swallow
+	NoSwallow = 0x2000, // indicates that the client should never be swallowed if launched by a terminal
 	Locked = 0x4000, // used by setfullscreen, prevents state change
 	Transient = 0x8000, // whether the client has the transient or hint
 	OnlyModButtons = 0x10000, // if enabled, allows buttons without modifiers to be used
-	NeedResize = 0x20000,
-	AttachMaster = 0x40000,
-	AttachAbove = 0x80000,
-	AttachAside = 0x100000,
-	AttachBelow = 0x200000,
-	AttachBottom = 0x400000,
+	FlagPlaceholder0x20000 = 0x20000,
+	AttachMaster = 0x40000, // attach the client as the first client in the list
+	AttachAbove = 0x80000, // attach the client before the currently selected client
+	AttachBelow = 0x100000, // attach the client after the currently selected client
+	AttachAside = 0x200000, // attach the client as the first client in the stack area
+	AttachBottom = 0x400000, // attach the client at the end of the list
 	SwitchTag = 0x800000, // automatically moves you to the tag of the newly opened application
 	EnableTag = 0x1000000, // enables the tag of the newly opened application in addition to your existing enabled tags
 	RevertTag = 0x2000000, // if SwitchTag or EnableTag, closing that window reverts the view back to what it was previously
@@ -37,16 +34,12 @@ static const unsigned long
 	IgnoreCfgReqSize = 0x10000000, // ignore the size details of configure requests coming from the client
 	IgnorePropTransientFor = 0x20000000, // ignore WM_TRANSIENT_FOR property notifications for buggy client windows (e.g. WebStorm)
 	IgnoreSizeHints = 0x40000000, // ignore size hints for clients (floating and tiled), see floatpos
-	AlwaysOnTop = 0x80000000,
-	/* Some clients (e.g. alacritty) helpfully send configure requests with a new size or position
-	 * when they detect that they have been moved to another monitor. This can cause visual glitches
-	 * when moving (or resizing) client windows from one monitor to another. This variable is used
-	 * internally to ignore such configure requests while movemouse or resizemouse are being used. */
-	MoveResize = 0x100000000, // used internally to indicate that the client is being moved or resized
-	NoBorder = 0x200000000,
-	FlagPlaceholder17179869184 = 0x400000000,
-	FlagPlaceholder34359738368 = 0x800000000,
-	FlagPlaceholder68719476736 = 0x1000000000,
+	IgnoreMinimumSizeHints = 0x80000000, // while respecting size hints in general ignore the minimum size restrictions to avoid overlapping windows
+	IgnoreDecorationHints = 0x100000000, // ignore decoration hints for client
+	NoBorder = 0x200000000, // indicates that the client should not be drawn with a border around it
+	FlagPlaceholder0x400000000 = 0x400000000,
+	FlagPlaceholder0x800000000 = 0x800000000,
+	RespectSizeHints = 0x1000000000, // respect size hints for this client when ResizeHints is globally disabled
 	FlagPlaceholder137438953472 = 0x2000000000,
 	FlagPlaceholder274877906944 = 0x4000000000,
 	FlagPlaceholder549755813888 = 0x8000000000,
@@ -67,11 +60,16 @@ static const unsigned long
 	FlagPlaceholder18014398509481984 = 0x40000000000000,
 	FlagPlaceholder36028797018963968 = 0x80000000000000,
 	FlagPlaceholder72057594037927936 = 0x100000000000000,
-	FlagPlaceholder144115188075855872 = 0x200000000000000,
-	FlagPlaceholder288230376151711744 = 0x400000000000000,
-	FlagPlaceholder576460752303423488 = 0x800000000000000,
-	FlagPlaceholder1152921504606846976 = 0x1000000000000000,
-	FlagPlaceholder2305843009213693952 = 0x2000000000000000,
+	/* Below are flags that are intended to only be used internally */
+	Invisible = 0x200000000000000, // by default all clients are visible, used by scratchpads to hide clients
+	/* Some clients (e.g. alacritty) helpfully send configure requests with a new size or position
+	 * when they detect that they have been moved to another monitor. This can cause visual glitches
+	 * when moving (or resizing) client windows from one monitor to another. This variable is used
+	 * internally to ignore such configure requests while movemouse or resizemouse are being used. */
+	MoveResize = 0x400000000000000, // used internally to indicate that the client is being moved or resized
+	MovePlace = 0x800000000000000, // used internally to indicate that the client is being moved within stack
+	NeedResize = 0x1000000000000000, // internal flag indicating that the client needs to be resized later
+	Ruled = 0x2000000000000000, // indicates whether client was subject to client rules (used internally to determine default behaviour)
 	FlagPlaceholder4611686018427387904 = 0x4000000000000000,
 	FlagPlaceholder9223372036854775808 = 0x8000000000000000;
 
@@ -92,11 +90,14 @@ static const unsigned long
 #define IGNORECFGREQSIZE(C) (C->flags & IgnoreCfgReqSize)
 #define IGNOREPROPTRANSIENTFOR(C) (C->flags & IgnorePropTransientFor)
 #define IGNORESIZEHINTS(C) (C->flags & IgnoreSizeHints)
+#define IGNOREMINIMUMSIZEHINTS(C) (C->flags & IgnoreMinimumSizeHints)
+#define IGNOREDECORATIONHINTS(C) (C->flags & IgnoreDecorationHints)
 #define NEEDRESIZE(C) (C->flags & NeedResize)
 #define NEVERFOCUS(C) (C->flags & NeverFocus)
 #define NOBORDER(C) (C->flags & NoBorder)
 #define NOSWALLOW(C) (C->flags & NoSwallow)
 #define ONLYMODBUTTONS(C) (C->flags & OnlyModButtons)
+#define RESPECTSIZEHINTS(C) (C->flags & RespectSizeHints)
 #define RESTOREFAKEFULLSCREEN(C) (C->flags & RestoreFakeFullScreen)
 #define RULED(C) (C->flags & Ruled)
 #define SWITCHTAG(C) (C->flags & SwitchTag)

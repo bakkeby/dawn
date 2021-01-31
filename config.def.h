@@ -43,6 +43,7 @@ static unsigned long functionality = 0
 //	|SmartGaps // enables no gaps if there is only one visible window
 //	|SmartGapsMonocle // enforces no (outer) gaps in monocle layout
 	|Systray // enables systray
+	|Swallow // enables swallowing of clients
 	|SwallowFloating // means swallow floating windows by default
 	|CenteredWindowName
 //	|BarActiveGroupBorderColor // use border color of active group, otherwise color for master group is used
@@ -63,6 +64,9 @@ static unsigned long functionality = 0
 //	|ViewOnTag // follow a window to the tag it is being moved to
 //	|Xresources // xrdb patch
 //	|AutoSaveFloats // auto save float posistion when using movemouse or resizemouse
+//	|CenterSizeHintsClients // center tiled clients subject to size hints within their tiled area
+//	|ResizeHints  // if enabled then dusk will respect size hints in tiled resizals
+//	|AutoHideScratchpads // automatically hide open scratchpads when moving to another workspace
 //	|Debug // enables additional debug output
 //	|Desktop // tags change in unison giving the appearance of the workspace spanning all monitors like traditionl desktop environments
 ;
@@ -76,8 +80,6 @@ static const char statussep              = ';'; /* separator between status bars
 
 static const char *fonts[]               = { "monospace:size=10" };
 static const char dmenufont[]            = "monospace:size=10";
-
-static char c000000[]                    = "#000000"; // placeholder value
 
 static char normfgcolor[]                = "#C6BDBD";
 static char normbgcolor[]                = "#180A13";
@@ -250,16 +252,9 @@ static const char *const autostart[] = {
 	NULL /* terminate */
 };
 
-
-const char *spcmd1[] = {"st", "-n", "spterm", "-g", "120x34", NULL };
-const char *spcmd2[] = {"st", "-n", "spfm", "-g", "144x41", "-e", "ranger", NULL };
-const char *spcmd3[] = {"keepassxc", NULL };
-static Sp scratchpads[] = {
-   /* name          cmd  */
-   {"spterm",      spcmd1},
-   {"spranger",    spcmd2},
-   {"keepassxc",   spcmd3},
-};
+static const char *spcmd1[] = {"w", "st", "-n", "spterm (w)", "-g", "120x34", NULL };
+static const char *spcmd2[] = {"e", "st", "-n", "spterm (e)", "-g", "120x34", NULL };
+static const char *spcmd3[] = {"r", "st", "-n", "spfm (r)", "-g", "144x41", "-e", "ranger", NULL };
 
 /* There are two options when it comes to per-client rules:
  *  - a typical struct table or
@@ -290,11 +285,9 @@ static const Rule rules[] = {
 	RULE(.wintype = WTYPE "UTILITY", .flags = AlwaysOnTop|Centered|Floating)
 	RULE(.wintype = WTYPE "TOOLBAR", .flags = AlwaysOnTop|Centered|Floating)
 	RULE(.wintype = WTYPE "SPLASH", .flags = AlwaysOnTop|Centered|Floating)
-	RULE(.instance = "spterm", .tags = SPTAG(0), .flags = Floating)
-	RULE(.instance = "spfm", .tags = SPTAG(1), .flags = Floating)
-	RULE(.instance = "keepassxc", .tags = SPTAG(2))
-	RULE(.title = "TermScratchpad (r)", .floatpos = "50% 50% 80% 80%", .tags = SPTAG(2), .flags = AlwaysOnTop|Floating)
-	RULE(.title = "TermScratchpad (t)", .floatpos = "50% 50% 80% 80%", .tags = SPTAG(3), .flags = AlwaysOnTop|Floating)
+	RULE(.instance = "spterm (w)", .scratchkey = 'w', .flags = Floating)
+	RULE(.instance = "spterm (e)", .scratchkey = 'e', .flags = Floating)
+	RULE(.instance = "spfm (r)", .scratchkey = 'r', .flags = Floating)
 	RULE(.class = "Gimp", .tags = 1 << 4, .flags = Floating|SwitchTag)
 	RULE(.class = "firefox", .tags = 1 << 7, .flags = AttachMaster|SwitchTag)
 	RULE(.class = "Steam", .flags = IgnoreCfgReqPos|Floating|Centered)
@@ -385,7 +378,6 @@ static char *tagicons[][NUMTAGS*2] = {
 static const float mfact     = 0.50; /* factor of master area size [0.05..0.95] */
 static const int nmaster     = 1;    /* number of clients in master area */
 static const int nstack      = 0;    /* number of clients in primary stack area */
-static const int resizehints = 0;    /* 1 means respect size hints in tiled resizals */
 
 static const Layout layouts[] = {
 	/* symbol     arrange function, { nmaster, nstack, layout, master axis, stack axis, secondary stack axis, symbol func } */
@@ -511,8 +503,8 @@ static Key keys[] = {
 	{ MODKEY|Ctrl|Shift,            XK_r,            removescratch,          {.ui = 2 } },
 	{ MODKEY,                       XK_f,            togglefullscreen,       {0} },
 	{ MODKEY|Shift,                 XK_f,            togglefakefullscreen,   {0} },
-	{ MODKEY,                       XK_0,            view,                   {.ui = ~SPTAGMASK } },
-	{ MODKEY|Shift,                 XK_0,            tag,                    {.ui = ~SPTAGMASK } },
+	{ MODKEY,                       XK_0,            view,                   {.ui = ~0 } },
+	{ MODKEY|Shift,                 XK_0,            tag,                    {.ui = ~0 } },
 	{ MODKEY|ShiftMask,             XK_plus,         changeopacity,          {.f = +0.05 } },
 	{ MODKEY|ShiftMask,             XK_minus,        changeopacity,          {.f = -0.05 } },
 	{ MODKEY|Shift,                 XK_comma,        focusmon,               {.i = -1 } },

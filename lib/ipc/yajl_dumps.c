@@ -3,6 +3,46 @@
 #include <stdint.h>
 
 int
+dump_settings(yajl_gen gen)
+{
+  // clang-format off
+  YMAP(
+    YSTR("Functionality"); YMAP(
+      YSTR("SmartGaps"); YBOOL(enabled(SmartGaps));
+      YSTR("SmartGapsMonocle"); YBOOL(enabled(SmartGapsMonocle));
+      YSTR("Systray"); YBOOL(enabled(Systray));
+      YSTR("Swallow"); YBOOL(enabled(Swallow));
+      YSTR("SwallowFloating"); YBOOL(enabled(SwallowFloating));
+      YSTR("CenteredWindowName"); YBOOL(enabled(CenteredWindowName));
+      YSTR("BarActiveGroupBorderColor"); YBOOL(enabled(BarActiveGroupBorderColor));
+      YSTR("SpawnCwd"); YBOOL(enabled(SpawnCwd));
+      YSTR("ColorEmoji"); YBOOL(enabled(ColorEmoji));
+      YSTR("Status2DNoAlpha"); YBOOL(enabled(Status2DNoAlpha));
+      YSTR("BarBorder"); YBOOL(enabled(BarBorder));
+      YSTR("NoBorders"); YBOOL(enabled(NoBorders));
+      YSTR("Warp"); YBOOL(enabled(Warp));
+      YSTR("FocusedOnTop"); YBOOL(enabled(FocusedOnTop));
+      YSTR("DecorationHints"); YBOOL(enabled(DecorationHints));
+      YSTR("FocusOnNetActive"); YBOOL(enabled(FocusOnNetActive));
+      YSTR("AllowNoModifierButtons"); YBOOL(enabled(AllowNoModifierButtons));
+      YSTR("CenterSizeHintsClients"); YBOOL(enabled(CenterSizeHintsClients));
+      YSTR("ResizeHints"); YBOOL(enabled(ResizeHints));
+      YSTR("SortScreens"); YBOOL(enabled(SortScreens));
+      YSTR("Xresources"); YBOOL(enabled(Xresources));
+      YSTR("AutoSaveFloats"); YBOOL(enabled(AutoSaveFloats));
+      YSTR("Debug"); YBOOL(enabled(Debug));
+      YSTR("TagIntoStack"); YBOOL(enabled(TagIntoStack));
+      YSTR("PerTagBar"); YBOOL(enabled(PerTagBar));
+      YSTR("AutoHideScratchpads"); YBOOL(enabled(AutoHideScratchpads));
+      YSTR("Desktop"); YBOOL(enabled(Desktop));
+    )
+  )
+  // clang-format on
+
+  return 0;
+}
+
+int
 dump_tag(yajl_gen gen, const char *name, const int tag_mask)
 {
   // clang-format off
@@ -88,6 +128,42 @@ dump_client(yajl_gen gen, Client *c)
       YSTR("never_focus"); YBOOL(NEVERFOCUS(c));
       YSTR("old_state"); YBOOL(WASFLOATING(c));
       YSTR("is_fullscreen"); YBOOL(ISFULLSCREEN(c));
+    )
+
+    YSTR("flags"); YMAP(
+      YSTR("AlwaysOnTop"); YBOOL(ALWAYSONTOP(c));
+      YSTR("Floating"); YBOOL(ISFLOATING(c));
+      YSTR("Fixed"); YBOOL(ISFIXED(c));
+      YSTR("Locked"); YBOOL(ISLOCKED(c));
+      YSTR("Sticky"); YBOOL(ISSTICKY(c));
+      YSTR("Centered"); YBOOL(ISCENTERED(c));
+      YSTR("FullScreen"); YBOOL(ISFULLSCREEN(c));
+      YSTR("FakeFullScreen"); YBOOL(ISFAKEFULLSCREEN(c));
+      YSTR("Permanent"); YBOOL(ISPERMANENT(c));
+      YSTR("Terminal"); YBOOL(ISTERMINAL(c));
+      YSTR("Transient"); YBOOL(ISTRANSIENT(c));
+      YSTR("Urgent"); YBOOL(ISURGENT(c));
+      YSTR("Visible"); YBOOL(ISVISIBLE(c));
+      YSTR("IgnoreCfgReq"); YBOOL(IGNORECFGREQ(c));
+      YSTR("IgnoreCfgReqPos"); YBOOL(IGNORECFGREQPOS(c));
+      YSTR("IgnoreCfgReqSize"); YBOOL(IGNORECFGREQSIZE(c));
+      YSTR("IgnorePropTransientFor"); YBOOL(IGNOREPROPTRANSIENTFOR(c));
+      YSTR("IgnoreSizeHints"); YBOOL(IGNORESIZEHINTS(c));
+      YSTR("IgnoreDecorationHints"); YBOOL(IGNOREDECORATIONHINTS(c));
+      YSTR("NeedResize"); YBOOL(NEEDRESIZE(c));
+      YSTR("NeverFocus"); YBOOL(NEVERFOCUS(c));
+      YSTR("NoBorder"); YBOOL(NOBORDER(c));
+      YSTR("NoSwallow"); YBOOL(NOSWALLOW(c));
+      YSTR("OnlyModButtons"); YBOOL(ONLYMODBUTTONS(c));
+      YSTR("RestoreFakeFullScreen"); YBOOL(RESTOREFAKEFULLSCREEN(c));
+      YSTR("Ruled"); YBOOL(RULED(c));
+      YSTR("SwitchTag"); YBOOL(SWITCHTAG(c));
+      YSTR("EnableTag"); YBOOL(ENABLETAG(c));
+      YSTR("RevertTag"); YBOOL(REVERTTAG(c));
+      YSTR("MoveResize"); YBOOL(MOVERESIZE(c));
+      YSTR("WasFloating"); YBOOL(WASFLOATING(c));
+      YSTR("WasFakeFullscreen"); YBOOL(WASFAKEFULLSCREEN(c));
+      YSTR("WasFullscreen"); YBOOL(WASFULLSCREEN(c));
     )
   )
   // clang-format on

@@ -21,8 +21,6 @@ tagallmon(const Arg *arg)
 		detachstack(c);
 		c->mon = n;
 		c->tags = n->tagset[n->seltags]; /* assign tags of target monitor */
-		c->next = NULL;
-		c->snext = NULL;
 		if (last)
 			last = last->next = c;
 		else

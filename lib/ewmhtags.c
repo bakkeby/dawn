@@ -14,7 +14,7 @@ persistmonitorstate(Monitor *m)
 	for (i = 1, c = m->clients; c; c = c->next, ++i) {
 		c->id = i;
 		setclientflags(c);
-		setclienttags(c);
+		setclientfields(c);
 		if (c->swallowing) {
 			setclientflags(c->swallowing);
 			setclientfields(c->swallowing);
@@ -53,9 +53,6 @@ setfloatinghint(Client *c)
 void
 setclientflags(Client *c)
 {
-	unsigned long data[] = { c->flags };
-	XChangeProperty(dpy, c->win, clientatom[DawnClientFlags], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
-
 	unsigned long data1[] = { c->flags & 0xFFFFFFFF };
 	unsigned long data2[] = { c->flags >> 32 };
 	XChangeProperty(dpy, c->win, clientatom[DawnClientFlags1], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data1, 1);
@@ -63,9 +60,10 @@ setclientflags(Client *c)
 }
 
 void
-setclienttags(Client *c)
+setclientfields(Client *c)
 {
-	unsigned long data[] = { c->mon->num | (c->id << 4) | (c->tags << 12)};
+	fprintf(stderr, "setclientfields: client %s c->scratchkey = %d\n", c->name, c->scratchkey);
+	unsigned long data[] = { c->mon->num | (c->id << 4) | (c->tags << 12) | (c->scratchkey << 21) };
 	XChangeProperty(dpy, c->win, clientatom[DawnClientTags], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
 }
 
@@ -80,15 +78,17 @@ getclientflags(Client *c)
 }
 
 void
-getclienttags(Client *c)
+getclientfields(Client *c)
 {
 	Monitor *m;
-	Atom clienttags = getatomprop(c, clientatom[DawnClientTags], AnyPropertyType);
-	if (clienttags) {
-		c->tags = (clienttags >> 12) & TAGMASK;
-		c->id = (clienttags & 0xFF0) >> 4;
+	Atom fields = getatomprop(c, clientatom[DawnClientTags], AnyPropertyType);
+	if (fields) {
+		c->scratchkey = (fields >> 21);
+		fprintf(stderr, "getclientfields: client %s c->scratchkey = %d\n", c->name, c->scratchkey);
+		c->tags = (fields >> 12) & TAGMASK;
+		c->id = (fields & 0xFF0) >> 4;
 		for (m = mons; m; m = m->next)
-			if (m->num == (clienttags & 0xF)) {
+			if (m->num == (fields & 0xF)) {
 				c->mon = m;
 				break;
 			}

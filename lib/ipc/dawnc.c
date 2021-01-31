@@ -55,7 +55,8 @@ typedef enum IPCMessageType {
   IPC_TYPE_GET_LAYOUTS = 3,
   IPC_TYPE_GET_DWM_CLIENT = 4,
   IPC_TYPE_SUBSCRIBE = 5,
-  IPC_TYPE_EVENT = 6
+  IPC_TYPE_EVENT = 6,
+  IPC_TYPE_GET_SETTINGS = 7,
 } IPCMessageType;
 
 // Every IPC message must begin with this
@@ -369,6 +370,16 @@ get_tags()
 }
 
 static int
+get_settings()
+{
+  send_message(IPC_TYPE_GET_SETTINGS, 1, (uint8_t *)"");
+  print_socket_reply();
+
+  return 0;
+}
+
+
+static int
 get_layouts()
 {
   send_message(IPC_TYPE_GET_LAYOUTS, 1, (uint8_t *)"");
@@ -467,6 +478,8 @@ print_usage(const char *name)
   puts("");
   puts("  get_tags                        Get list of tags");
   puts("");
+  puts("  get_settings                    Get list of settings");
+  puts("");
   puts("  get_layouts                     Get list of layouts");
   puts("");
   puts("  get_dwm_client <window_id>      Get dwm client proprties");
@@ -519,6 +532,8 @@ main(int argc, char *argv[])
     get_monitors();
   } else if (strcmp(argv[i], "get_tags") == 0) {
     get_tags();
+  } else if (strcmp(argv[i], "get_settings") == 0) {
+    get_settings();
   } else if (strcmp(argv[i], "get_layouts") == 0) {
     get_layouts();
   } else if (strcmp(argv[i], "get_dwm_client") == 0) {

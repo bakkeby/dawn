@@ -9,63 +9,65 @@ static int scanner;
 static xcb_connection_t *xcon;
 
 int
-swallow(Client *p, Client *c)
+swallow(Client *t, Client *c)
 {
-	Client *s;
-
-	if (NOSWALLOW(c) || ISTERMINAL(c))
+	if (disabled(Swallow) || NOSWALLOW(c) || ISTERMINAL(c))
 		return 0;
 	if (!RULED(c) && disabled(SwallowFloating) && ISFLOATING(c))
 		return 0;
 
-	XMapWindow(dpy, c->win);
-
-	detach(c);
-	detachstack(c);
-
-	setclientstate(c, WithdrawnState);
-	XUnmapWindow(dpy, p->win);
-
-	p->swallowing = c;
-	c->mon = p->mon;
-
-	Window w = p->win;
-	p->win = c->win;
-	c->win = w;
-
-	XChangeProperty(dpy, c->win, netatom[NetClientList], XA_WINDOW, 32, PropModeReplace,
-		(unsigned char *) &(p->win), 1);
-	updatetitle(p);
-	s = scanner ? c : p;
-	setfloatinghint(s);
-	XMoveResizeWindow(dpy, s->win, s->x, s->y, s->w, s->h);
-	arrange(p->mon);
-	configure(p);
-	updateclientlist();
+	replaceclient(t, c);
+	addflag(c, IgnoreCfgReq);
+	c->swallowing = t;
 
 	return 1;
 }
 
 void
+replaceclient(Client *old, Client *new)
+{
+	Client *c = NULL;
+	Monitor *mon = old->mon;
+
+	new->mon = mon;
+	new->tags = old->tags;
+	setflag(new, Floating, ISFLOATING(old));
+
+	new->next = old->next;
+	new->snext = old->snext;
+
+	if (old == mon->clients)
+		mon->clients = new;
+	else {
+		for (c = mon->clients; c && c->next != old; c = c->next);
+		c->next = new;
+	}
+
+	if (old == mon->stack)
+		mon->stack = new;
+	else {
+		for (c = mon->stack; c && c->snext != old; c = c->snext);
+		c->snext = new;
+	}
+
+	old->next = NULL;
+	old->snext = NULL;
+
+	XMoveWindow(dpy, old->win, WIDTH(old) * -2, old->y);
+
+	if (ISVISIBLE(new)) {
+		if (ISFLOATING(new))
+			resize(new, old->x, old->y, new->w - 2*new->bw, new->h - 2*new->bw, 0);
+		else
+			resize(new, old->x, old->y, old->w - 2*new->bw, old->h - 2*new->bw, 0);
+	}
+}
+
+void
 unswallow(Client *c)
 {
-	c->win = c->swallowing->win;
-
-	free(c->swallowing);
+	replaceclient(c, c->swallowing);
 	c->swallowing = NULL;
-
-	XDeleteProperty(dpy, c->win, netatom[NetClientList]);
-
-	/* unfullscreen the client */
-	setfullscreen(c, 0, 0);
-	updatetitle(c);
-	arrange(c->mon);
-	XMapWindow(dpy, c->win);
-	XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
-	setfloatinghint(c);
-	setclientstate(c, NormalState);
-	focus(NULL);
-	arrange(c->mon);
 }
 
 pid_t
