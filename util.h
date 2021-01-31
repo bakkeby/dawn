@@ -39,7 +39,7 @@ static const unsigned long
 	Xresources = 0x200000, // xrdb patch
 	AutoSaveFloats = 0x400000, // auto save float posistion when using movemouse or resizemouse
 	Debug = 0x800000,
-	FuncPlaceholder0x1000000 = 0x1000000,
+	Desktop = 0x1000000, // tags change in unison giving the appearance of tags spanning all monitors like traditionl desktop environments
 	FuncPlaceholder0x2000000 = 0x2000000,
 	FuncPlaceholder0x4000000 = 0x4000000,
 	FuncPlaceholder0x8000000 = 0x8000000,

@@ -9,32 +9,62 @@ keyrelease(XEvent *e)
 void
 combotag(const Arg *arg)
 {
-	if (selmon->sel && arg->ui & TAGMASK) {
-		if (selmon->sel->reverttags)
-			selmon->sel->reverttags = 0;
-		if (combo) {
-			selmon->sel->tags |= arg->ui & TAGMASK;
-		} else {
-			combo = 1;
-			selmon->sel->tags = arg->ui & TAGMASK;
-		}
+	Monitor *m;
+	if (!(selmon->sel && arg->ui & TAGMASK))
+		return;
+
+	if (enabled(Desktop)) {
+		for (m = mons; m; m = m->next)
+			combotagmon(m, arg);
+		focus(NULL);
+		arrange(NULL);
+	} else {
+		combotagmon(selmon, arg);
 		focus(NULL);
 		arrange(selmon);
 	}
+	combo = 1;
 }
+
+void
+combotagmon(Monitor *m, const Arg *arg)
+{
+	if (m->sel->reverttags)
+		m->sel->reverttags = 0;
+	if (combo)
+		m->sel->tags |= arg->ui & TAGMASK;
+	else
+		m->sel->tags = arg->ui & TAGMASK;
+}
+
 
 void
 comboview(const Arg *arg)
 {
+	Monitor *m;
+
+	if (enabled(Desktop)) {
+		for (m = mons; m; m = m->next)
+			comboviewmon(m, arg);
+		focus(NULL);
+		arrange(NULL);
+	} else {
+		comboviewmon(selmon, arg);
+		focus(NULL);
+		arrange(selmon);
+	}
+	combo = 1;
+}
+
+void
+comboviewmon(Monitor *m, const Arg *arg)
+{
 	unsigned newtags = arg->ui & TAGMASK;
 	if (combo) {
-		selmon->tagset[selmon->seltags] |= newtags;
+		m->tagset[m->seltags] |= newtags;
 	} else {
-		selmon->seltags ^= 1;	/*toggle tagset*/
-		combo = 1;
+		m->seltags ^= 1;	/*toggle tagset*/
 		if (newtags)
-			pertagview(&((Arg) { .ui = newtags }));
+			viewmon(m, &((Arg) { .ui = newtags }));
 	}
-	focus(NULL);
-	arrange(selmon);
 }

@@ -1,6 +1,7 @@
 void
 swaptags(const Arg *arg)
 {
+	Monitor *m;
 	unsigned int newtag = arg->ui & TAGMASK;
 	unsigned int curtag = selmon->tagset[selmon->seltags];
 
@@ -15,8 +16,14 @@ swaptags(const Arg *arg)
 			c->tags = newtag;
 	}
 
-	selmon->tagset[selmon->seltags] = newtag;
-
-	focus(NULL);
-	arrange(selmon);
+	if (enabled(Desktop)) {
+		for (m = mons; m; m = m->next)
+			m->tagset[m->seltags] = newtag;
+		focus(NULL);
+		arrange(NULL);
+	} else {
+		selmon->tagset[selmon->seltags] = newtag;
+		focus(NULL);
+		arrange(selmon);
+	}
 }

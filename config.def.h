@@ -40,26 +40,31 @@ static int tiledindicatortype            = INDICATOR_NONE;
 
 /* See util.h for options */
 static unsigned long functionality = 0
-	|Systray
-	|SwallowFloating
+//	|SmartGaps // enables no gaps if there is only one visible window
+//	|SmartGapsMonocle // enforces no (outer) gaps in monocle layout
+	|Systray // enables systray
+	|SwallowFloating // means swallow floating windows by default
 	|CenteredWindowName
-	|SpawnCwd
-	|BarBorder
-//	|Warp
+//	|BarActiveGroupBorderColor // use border color of active group, otherwise color for master group is used
+	|SpawnCwd // spawn applications in the currently selected client's working directory
+//	|ColorEmoji
+//	|Status2DNoAlpha // option to not use alpha when drawing status2d status
+//	|FuncPlaceholder0x200
+	|BarBorder // draw a border around the bar
+//	|NoBorders // as per the noborder patch, show no border when only one client in tiled mode
+//	|Warp // warp patch
+//	|FocusedOnTop
+//	|DecorationHints // used by setfullscreen, prevents state change
 	|FocusOnNetActive
 	|AllowNoModifierButtons
 	|TagIntoStack
-//	|ColorEmoji
-//	|Debug
-//	|FocusedOnTop
-//	|BarActiveGroupBorderColor
-//	|DecorationHints
-//	|NoBorder
 //	|PerTagBar
-//	|SortScreens
-//	|ViewOnTag
-//	|Xresources
-//	|AutoSaveFloats
+//	|SortScreens // only applies on startup
+//	|ViewOnTag // follow a window to the tag it is being moved to
+//	|Xresources // xrdb patch
+//	|AutoSaveFloats // auto save float posistion when using movemouse or resizemouse
+//	|Debug // enables additional debug output
+//	|Desktop // tags change in unison giving the appearance of the workspace spanning all monitors like traditionl desktop environments
 ;
 
 static const char statussep              = ';'; /* separator between status bars */

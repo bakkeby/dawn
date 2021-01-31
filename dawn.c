@@ -481,6 +481,7 @@ static void togglefloating(const Arg *arg);
 static void togglemaximize(Client *c, int maximize_vert, int maximize_horz);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
+static void toggleviewmon(Monitor *m, const Arg *arg);
 static void unfocus(Client *c, int setfocus, Client *nextfocus);
 static void unmanage(Client *c, int destroyed);
 static void unmapnotify(XEvent *e);
@@ -494,6 +495,7 @@ static void updatestatus(void);
 static void updatetitle(Client *c);
 static void updatewmhints(Client *c);
 static void view(const Arg *arg);
+static void viewmon(Monitor *m, const Arg *arg);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
 static int xerror(Display *dpy, XErrorEvent *ee);
@@ -622,7 +624,7 @@ applyrules(Client *c)
 					if (REVERTTAG(c))
 						c->reverttags = c->mon->tagset[c->mon->seltags];
 					if (SWITCHTAG(c)) {
-						pertagview(&((Arg) { .ui = newtagset }));
+						viewmon(selmon, &((Arg) { .ui = newtagset }));
 					} else {
 						c->mon->tagset[c->mon->seltags] = newtagset;
 					}
@@ -3065,59 +3067,72 @@ toggletag(const Arg *arg)
 void
 toggleview(const Arg *arg)
 {
-	unsigned int newtagset = selmon->tagset[selmon->seltags] ^ (arg->ui & TAGMASK);
+	Monitor *m;
+	if (enabled(Desktop))
+		for (m = mons; m; m = m->next)
+			toggleviewmon(m, arg);
+	else
+		toggleviewmon(selmon, arg);
+
+	focus(NULL);
+	updatecurrentdesktop();
+}
+
+void
+toggleviewmon(Monitor *m, const Arg *arg)
+{
+	unsigned int newtagset = m->tagset[m->seltags] ^ (arg->ui & TAGMASK);
 	int i;
 
 	if (enabled(TagIntoStack)) {
-		Client *const selected = selmon->sel;
+		Client *const selected = m->sel;
 
 		// clients in the master area should be the same after we add a new tag
-		Client **const masters = calloc(selmon->nmaster, sizeof(Client *));
+		Client **const masters = calloc(m->nmaster, sizeof(Client *));
 		if (!masters) {
-			die("fatal: could not calloc() %u bytes \n", selmon->nmaster * sizeof(Client *));
+			die("fatal: could not calloc() %u bytes \n", m->nmaster * sizeof(Client *));
 		}
 		// collect (from last to first) references to all clients in the master area
 		Client *c;
 		size_t j;
-		for (c = nexttiled(selmon->clients), j = 0; c && j < selmon->nmaster; c = nexttiled(c->next), ++j)
-			masters[selmon->nmaster - (j + 1)] = c;
+		for (c = nexttiled(m->clients), j = 0; c && j < m->nmaster; c = nexttiled(c->next), ++j)
+			masters[m->nmaster - (j + 1)] = c;
 		// put the master clients at the front of the list
 		// > go from the 'last' master to the 'first'
-		for (j = 0; j < selmon->nmaster; ++j)
+		for (j = 0; j < m->nmaster; ++j)
 			if (masters[j])
 				pop(masters[j]);
 		free(masters);
 
 		// we also want to be sure not to mutate the focus
-		focus(selected);
+		if (m == selmon)
+			focus(selected);
 	}
 
 	if (newtagset) {
-		selmon->tagset[selmon->seltags] = newtagset;
+		m->tagset[m->seltags] = newtagset;
 
 		if (newtagset == ~SPTAGMASK) {
-			selmon->pertag->prevtag = selmon->pertag->curtag;
-			selmon->pertag->curtag = 0;
+			m->pertag->prevtag = m->pertag->curtag;
+			m->pertag->curtag = 0;
 		}
 		/* test if the user did not select the same tag */
-		if (!(newtagset & 1 << (selmon->pertag->curtag - 1))) {
-			selmon->pertag->prevtag = selmon->pertag->curtag;
+		if (!(newtagset & 1 << (m->pertag->curtag - 1))) {
+			m->pertag->prevtag = m->pertag->curtag;
 			for (i=0; !(newtagset & 1 << i); i++) ;
-			selmon->pertag->curtag = i + 1;
+			m->pertag->curtag = i + 1;
 		}
 
 		/* apply settings for this view */
-		selmon->nmaster = selmon->pertag->nmasters[selmon->pertag->curtag];
-		selmon->mfact = selmon->pertag->mfacts[selmon->pertag->curtag];
-		selmon->sellt = selmon->pertag->sellts[selmon->pertag->curtag];
-		selmon->lt[selmon->sellt] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt];
-		selmon->lt[selmon->sellt^1] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt^1];
-		if (enabled(PerTagBar) && selmon->showbar != selmon->pertag->showbars[selmon->pertag->curtag])
+		m->nmaster = m->pertag->nmasters[m->pertag->curtag];
+		m->mfact = m->pertag->mfacts[m->pertag->curtag];
+		m->sellt = m->pertag->sellts[m->pertag->curtag];
+		m->lt[m->sellt] = m->pertag->ltidxs[m->pertag->curtag][m->sellt];
+		m->lt[m->sellt^1] = m->pertag->ltidxs[m->pertag->curtag][m->sellt^1];
+		if (enabled(PerTagBar) && m->showbar != m->pertag->showbars[m->pertag->curtag])
 			togglebar(NULL);
-		focus(NULL);
-		arrange(selmon);
+		arrange(m);
 	}
-	updatecurrentdesktop();
 }
 
 void
@@ -3503,16 +3518,59 @@ updatewmhints(Client *c)
 void
 view(const Arg *arg)
 {
+	Monitor *m;
 	if (arg->ui && (arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
 	{
 		view(&((Arg) { .ui = 0 }));
 		return;
     }
-	selmon->seltags ^= 1; /* toggle sel tagset */
-	pertagview(arg);
-	focus(NULL);
-	arrange(selmon);
+    if (enabled(Desktop)) {
+    	for (m = mons; m; m = m->next)
+    		viewmon(m, arg);
+    	focus(NULL);
+    	arrange(NULL);
+    } else {
+    	viewmon(selmon, arg);
+		focus(NULL);
+		arrange(selmon);
+    }
 	updatecurrentdesktop();
+}
+
+void
+viewmon(Monitor *m, const Arg *arg)
+{
+	int i;
+	unsigned int tmptag;
+	m->seltags ^= 1; /* toggle sel tagset */
+
+	if (arg->ui & TAGMASK) {
+		m->pertag->prevtag = m->pertag->curtag;
+		m->tagset[m->seltags] = arg->ui & TAGMASK;
+		if (arg->ui == ~SPTAGMASK)
+			m->pertag->curtag = 0;
+		else {
+			for (i = 0; !(arg->ui & 1 << i); i++) ;
+			m->pertag->curtag = i + 1;
+		}
+	} else {
+		tmptag = m->pertag->prevtag;
+		m->pertag->prevtag = m->pertag->curtag;
+		m->pertag->curtag = tmptag;
+	}
+	m->nmaster = m->pertag->nmasters[m->pertag->curtag];
+	m->nstack = m->pertag->nstacks[m->pertag->curtag];
+	m->mfact = m->pertag->mfacts[m->pertag->curtag];
+	m->sellt = m->pertag->sellts[m->pertag->curtag];
+	m->lt[m->sellt] = m->pertag->ltidxs[m->pertag->curtag][m->sellt];
+	m->lt[m->sellt^1] = m->pertag->ltidxs[m->pertag->curtag][m->sellt^1];
+
+	m->ltaxis[LAYOUT] = m->pertag->ltaxis[m->pertag->curtag][LAYOUT];
+	m->ltaxis[MASTER] = m->pertag->ltaxis[m->pertag->curtag][MASTER];
+	m->ltaxis[STACK]  = m->pertag->ltaxis[m->pertag->curtag][STACK];
+	m->ltaxis[STACK2] = m->pertag->ltaxis[m->pertag->curtag][STACK2];
+	if (enabled(PerTagBar) && m->showbar != m->pertag->showbars[m->pertag->curtag])
+		togglebar(NULL);
 }
 
 Client *
