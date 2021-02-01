@@ -628,13 +628,13 @@ flextile(Monitor *m)
 	int oh = 0, ov = 0, ih = 0, iv = 0; // gaps outer/inner horizontal/vertical
 	getgaps(m, &oh, &ov, &ih, &iv, &n);
 
-	if (m->lt[m->sellt]->preset.layout != m->ltaxis[LAYOUT] ||
-			m->lt[m->sellt]->preset.masteraxis != m->ltaxis[MASTER] ||
-			m->lt[m->sellt]->preset.stack1axis != m->ltaxis[STACK] ||
-			m->lt[m->sellt]->preset.stack2axis != m->ltaxis[STACK2])
+	if (m->layout->preset.layout != m->ltaxis[LAYOUT] ||
+			m->layout->preset.masteraxis != m->ltaxis[MASTER] ||
+			m->layout->preset.stack1axis != m->ltaxis[STACK] ||
+			m->layout->preset.stack2axis != m->ltaxis[STACK2])
 		setflexsymbols(m, n);
-	else if (m->lt[m->sellt]->preset.symbolfunc != NULL)
-		m->lt[m->sellt]->preset.symbolfunc(m, n);
+	else if (m->layout->preset.symbolfunc != NULL)
+		m->layout->preset.symbolfunc(m, n);
 
 	if (n == 0)
 		return;
@@ -711,7 +711,7 @@ decksymbols(Monitor *m, unsigned int n)
 void
 mirrorlayout(const Arg *arg)
 {
-	if (!selmon->lt[selmon->sellt]->arrange)
+	if (!selmon->layout->arrange)
 		return;
 	selmon->ltaxis[LAYOUT] *= -1;
 	selmon->pertag->ltaxis[selmon->pertag->curtag][0] = selmon->ltaxis[LAYOUT];
@@ -725,7 +725,7 @@ rotatelayoutaxis(const Arg *arg)
 	int incr = (arg->i > 0 ? 1 : -1);
 	int axis = abs(arg->i) - 1;
 
-	if (!selmon->lt[selmon->sellt]->arrange)
+	if (!selmon->layout->arrange)
 		return;
 	if (axis == LAYOUT) {
 		if (selmon->ltaxis[LAYOUT] >= 0) {

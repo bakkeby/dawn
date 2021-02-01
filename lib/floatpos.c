@@ -3,7 +3,7 @@ floatpos(const Arg *arg)
 {
 	Client *c = selmon->sel;
 
-	if (!c || (selmon->lt[selmon->sellt]->arrange && !ISFLOATING(c)))
+	if (!c || (selmon->layout->arrange && !ISFLOATING(c)))
 		return;
 
 	setfloatpos(c, (char *)arg->v);
@@ -23,7 +23,7 @@ setfloatpos(Client *c, const char *floatpos)
 
 	if (!c || !floatpos)
 		return;
-	if (selmon->lt[selmon->sellt]->arrange && !ISFLOATING(c))
+	if (selmon->layout->arrange && !ISFLOATING(c))
 		return;
 
 	switch(sscanf(floatpos, "%d%c %d%c %d%c %d%c", &x, &xCh, &y, &yCh, &w, &wCh, &h, &hCh)) {

@@ -22,7 +22,7 @@ dragmfact(const Arg *arg)
 
 	if (!n)
 		return;
-	else if (m->lt[m->sellt]->arrange == &flextile) {
+	else if (m->layout->arrange == &flextile) {
 		int layout = m->ltaxis[LAYOUT];
 		if (layout < 0) {
 			mirror = 1;
@@ -50,9 +50,9 @@ dragmfact(const Arg *arg)
 	}
 
 	/* do not allow mfact to be modified under certain conditions */
-	if (!m->lt[m->sellt]->arrange                    // floating layout
+	if (!m->layout->arrange                    // floating layout
 		|| (!fixed && m->nmaster && n <= m->nmaster) // no master
-		|| (m->lt[m->sellt]->arrange == &flextile && m->ltaxis[LAYOUT] == NO_SPLIT)
+		|| (m->layout->arrange == &flextile && m->ltaxis[LAYOUT] == NO_SPLIT)
 	)
 		return;
 

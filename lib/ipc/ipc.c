@@ -1126,11 +1126,11 @@ ipc_send_events(Monitor *mons, Monitor **lastselmon, Monitor *selmon)
 		}
 
 		if (strcmp(m->ltsymbol, m->lastltsymbol) != 0 ||
-				m->lastlt != m->lt[m->sellt]) {
+				m->lastlt != m->layout) {
 			ipc_layout_change_event(m->num, m->lastltsymbol, m->lastlt, m->ltsymbol,
-															m->lt[m->sellt]);
+															m->layout);
 			strcpy(m->lastltsymbol, m->ltsymbol);
-			m->lastlt = m->lt[m->sellt];
+			m->lastlt = m->layout;
 		}
 
 		if (*lastselmon != selmon) {

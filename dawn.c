@@ -362,7 +362,6 @@ struct Monitor {
 	int gappoh;           /* horizontal outer gaps */
 	int gappov;           /* vertical outer gaps */
 	unsigned int borderpx;
-	unsigned int sellt;
 	unsigned int tags, prevtags;
 	int showbar;
 	Client *clients;
@@ -370,7 +369,8 @@ struct Monitor {
 	Client *stack;
 	Monitor *next;
 	Bar *bar;
-	const Layout *lt[2];
+	const Layout *layout;
+	const Layout *prevlayout; // only used by the IPC patch
 	int iconset;
 	Pertag *pertag;
 	char lastltsymbol[16];
@@ -674,7 +674,7 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 		*h = bh;
 	if (*w < bh)
 		*w = bh;
-	if (!IGNORESIZEHINTS(c) && (enabled(ResizeHints) || RESPECTSIZEHINTS(c) || ISFLOATING(c) || !c->mon->lt[c->mon->sellt]->arrange)) {
+	if (!IGNORESIZEHINTS(c) && (enabled(ResizeHints) || RESPECTSIZEHINTS(c) || ISFLOATING(c) || !c->mon->layout->arrange)) {
 		/* see last two sentences in ICCCM 4.1.2.3 */
 		baseismin = c->basew == c->minw && c->baseh == c->minh;
 		if (!baseismin) { /* temporarily remove base dimensions */
@@ -725,9 +725,9 @@ arrange(Monitor *m)
 void
 arrangemon(Monitor *m)
 {
-	strncpy(m->ltsymbol, m->lt[m->sellt]->symbol, sizeof m->ltsymbol);
-	if (m->lt[m->sellt]->arrange)
-		m->lt[m->sellt]->arrange(m);
+	strncpy(m->ltsymbol, m->layout->symbol, sizeof m->ltsymbol);
+	if (m->layout->arrange)
+		m->layout->arrange(m);
 	drawbar(m);
 }
 
@@ -821,7 +821,7 @@ cleanup(void)
 	Monitor *m;
 	size_t i;
 	view(&a);
-	selmon->lt[selmon->sellt] = &foo;
+	selmon->layout = &foo;
 	for (m = mons; m; m = m->next)
 		while (m->stack)
 			unmanage(m->stack, 0);
@@ -1085,7 +1085,7 @@ configurerequest(XEvent *e)
 			return;
 		if (ev->value_mask & CWBorderWidth)
 			c->bw = ev->border_width;
-		else if (ISFLOATING(c) || !selmon->lt[selmon->sellt]->arrange) {
+		else if (ISFLOATING(c) || !selmon->layout->arrange) {
 			if (IGNORECFGREQPOS(c) && IGNORECFGREQSIZE(c))
 				return;
 
@@ -1167,8 +1167,8 @@ createmon(int num)
 				&& (mr->tag <= 0 || (m->tags & (1 << (mr->tag - 1))))) {
 			layout = MAX(mr->layout, 0);
 			layout = MIN(layout, LENGTH(layouts) - 1);
-			m->lt[0] = &layouts[layout];
-			m->lt[1] = &layouts[1 % LENGTH(layouts)];
+			m->layout = &layouts[layout];
+			m->prevlayout = &layouts[1 % LENGTH(layouts)];
 			strncpy(m->ltsymbol, layouts[layout].symbol, sizeof m->ltsymbol);
 
 			if (mr->mfact > -1)
@@ -1204,10 +1204,10 @@ createmon(int num)
 		bar->bh = bh + bar->borderpx * 2;
 	}
 
-	m->ltaxis[LAYOUT] = m->lt[0]->preset.layout;
-	m->ltaxis[MASTER] = m->lt[0]->preset.masteraxis;
-	m->ltaxis[STACK]  = m->lt[0]->preset.stack1axis;
-	m->ltaxis[STACK2] = m->lt[0]->preset.stack2axis;
+	m->ltaxis[LAYOUT] = m->layout->preset.layout;
+	m->ltaxis[MASTER] = m->layout->preset.masteraxis;
+	m->ltaxis[STACK]  = m->layout->preset.stack1axis;
+	m->ltaxis[STACK2] = m->layout->preset.stack2axis;
 
 	if (!(m->pertag = (Pertag *)calloc(1, sizeof(Pertag))))
 		die("fatal: could not malloc() %u bytes\n", sizeof(Pertag));
@@ -1222,19 +1222,18 @@ createmon(int num)
 			if ((mr->monitor == -1 || mr->monitor == m->num) && (mr->tag == -1 || mr->tag == i)) {
 				layout = MAX(mr->layout, 0);
 				layout = MIN(layout, LENGTH(layouts) - 1);
-				m->pertag->ltidxs[i][0] = &layouts[layout];
-				m->pertag->ltidxs[i][1] = m->lt[0];
+				m->pertag->layouts[i] = &layouts[layout];
+				m->pertag->prevlayouts[i] = m->layout;
 				m->pertag->nmasters[i] = (mr->nmaster > -1 ? mr->nmaster : m->nmaster);
 				m->pertag->mfacts[i] = (mr->mfact > -1 ? mr->mfact : m->mfact);
 				m->pertag->showbars[i] = (mr->showbar > -1 ? mr->showbar : m->showbar);
-				m->pertag->ltaxis[i][LAYOUT] = m->pertag->ltidxs[i][0]->preset.layout;
-				m->pertag->ltaxis[i][MASTER] = m->pertag->ltidxs[i][0]->preset.masteraxis;
-				m->pertag->ltaxis[i][STACK]  = m->pertag->ltidxs[i][0]->preset.stack1axis;
-				m->pertag->ltaxis[i][STACK2] = m->pertag->ltidxs[i][0]->preset.stack2axis;
+				m->pertag->ltaxis[i][LAYOUT] = m->pertag->layouts[i]->preset.layout;
+				m->pertag->ltaxis[i][MASTER] = m->pertag->layouts[i]->preset.masteraxis;
+				m->pertag->ltaxis[i][STACK]  = m->pertag->layouts[i]->preset.stack1axis;
+				m->pertag->ltaxis[i][STACK2] = m->pertag->layouts[i]->preset.stack2axis;
 				break;
 			}
 		}
-		m->pertag->sellts[i] = m->sellt;
 
 		m->pertag->enablegaps[i] = 1;
 	}
@@ -1526,7 +1525,7 @@ focus(Client *c)
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 	}
 	selmon->sel = c;
-	if (selmon->lt[selmon->sellt]->arrange == flextile && (
+	if (selmon->layout->arrange == flextile && (
 			selmon->ltaxis[MASTER] == MONOCLE ||
 			selmon->ltaxis[STACK] == MONOCLE ||
 			selmon->ltaxis[STACK2] == MONOCLE))
@@ -1715,7 +1714,7 @@ void
 incnmaster(const Arg *arg)
 {
 	selmon->nmaster = selmon->pertag->nmasters[selmon->pertag->curtag] = MAX(selmon->nmaster + arg->i, 0);
-	if (selmon->lt[selmon->sellt]->arrange == flextile && (
+	if (selmon->layout->arrange == flextile && (
 			selmon->ltaxis[MASTER] == MONOCLE ||
 			selmon->ltaxis[STACK] == MONOCLE ||
 			selmon->ltaxis[STACK2] == MONOCLE))
@@ -1728,7 +1727,7 @@ void
 incnstack(const Arg *arg)
 {
 	selmon->nstack = selmon->pertag->nstacks[selmon->pertag->curtag] = MAX(selmon->nstack + arg->i, 0);
-	if (selmon->lt[selmon->sellt]->arrange == flextile && (
+	if (selmon->layout->arrange == flextile && (
 			selmon->ltaxis[MASTER] == MONOCLE ||
 			selmon->ltaxis[STACK] == MONOCLE ||
 			selmon->ltaxis[STACK2] == MONOCLE))
@@ -2069,10 +2068,10 @@ movemouse(const Arg *arg)
 				ny = selmon->wy;
 			else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c))) < snap)
 				ny = selmon->wy + selmon->wh - HEIGHT(c);
-			if (!ISFLOATING(c) && selmon->lt[selmon->sellt]->arrange
+			if (!ISFLOATING(c) && selmon->layout->arrange
 					&& (abs(nx - c->x) > snap || abs(ny - c->y) > snap))
 				togglefloating(NULL);
-			if (!selmon->lt[selmon->sellt]->arrange || ISFLOATING(c)) {
+			if (!selmon->layout->arrange || ISFLOATING(c)) {
 				resize(c, nx, ny, c->w, c->h, 1);
 				if (enabled(AutoSaveFloats))
 					savefloats(NULL);
@@ -2159,6 +2158,7 @@ propertynotify(XEvent *e)
 			break;
 		case XA_WM_NORMAL_HINTS:
 			updatesizehints(c);
+			arrangemon(c->mon);
 			break;
 		case XA_WM_HINTS:
 			updatewmhints(c);
@@ -2256,7 +2256,7 @@ resizeclientpad(Client *c, int x, int y, int w, int h, int tw, int th)
 	if (enabled(NoBorders) && ((nexttiled(c->mon->clients) == c && !nexttiled(c->next)))
 		&& (ISFAKEFULLSCREEN(c) || !ISFULLSCREEN(c))
 		&& !ISFLOATING(c)
-		&& c->mon->lt[c->mon->sellt]->arrange)
+		&& c->mon->layout->arrange)
 	{
 		wc.width += c->bw * 2;
 		wc.height += c->bw * 2;
@@ -2326,11 +2326,11 @@ resizemouse(const Arg *arg)
 			if (c->mon->wx + nw >= selmon->wx && c->mon->wx + nw <= selmon->wx + selmon->ww
 			&& c->mon->wy + nh >= selmon->wy && c->mon->wy + nh <= selmon->wy + selmon->wh)
 			{
-				if (!ISFLOATING(c) && selmon->lt[selmon->sellt]->arrange
+				if (!ISFLOATING(c) && selmon->layout->arrange
 				&& (abs(nw - c->w) > snap || abs(nh - c->h) > snap))
 					togglefloating(NULL);
 			}
-			if (!selmon->lt[selmon->sellt]->arrange || ISFLOATING(c)) {
+			if (!selmon->layout->arrange || ISFLOATING(c)) {
 				resize(c, nx, ny, nw, nh, 1);
 				if (enabled(AutoSaveFloats))
 					savefloats(NULL);
@@ -2359,9 +2359,9 @@ restack(Monitor *m)
 
 	if (!m->sel)
 		return;
-	if (ISFLOATING(m->sel) || !m->lt[m->sellt]->arrange)
+	if (ISFLOATING(m->sel) || !m->layout->arrange)
 		XRaiseWindow(dpy, m->sel->win);
-	if (m->lt[m->sellt]->arrange) {
+	if (m->layout->arrange) {
 		wc.stack_mode = Below;
 		wc.sibling = m->bar->win;
 		for (c = m->stack; c; c = c->snext)
@@ -2612,34 +2612,50 @@ setfullscreen(Client *c, int fullscreen, int restorefakefullscreen)
 void
 setlayout(const Arg *arg)
 {
-	if (!arg || !arg->v || arg->v != selmon->lt[selmon->sellt]) {
-		selmon->pertag->sellts[selmon->pertag->curtag] ^= 1;
-		selmon->sellt = selmon->pertag->sellts[selmon->pertag->curtag];
+	Monitor *m = selmon;
+	const Layout *tmplayout;
+	int i;
+	int fullarrange = (
+		m->ltaxis[MASTER] == MONOCLE ||
+		m->ltaxis[STACK] == MONOCLE ||
+		m->ltaxis[STACK2] == MONOCLE
+	);
+
+	if (!arg || !arg->v) {
+		tmplayout = m->layout;
+		m->layout = m->pertag->prevlayouts[m->pertag->curtag];
+		m->pertag->prevlayouts[m->pertag->curtag] = m->prevlayout = tmplayout;
+
+		for (i = 0; i < LTAXIS_LAST; i++)
+			m->ltaxis[i] = m->pertag->prevltaxis[m->pertag->curtag][i];
+	} else if (arg && arg->v) {
+		m->pertag->prevlayouts[m->pertag->curtag] = m->prevlayout = m->layout;
+		m->pertag->layouts[m->pertag->curtag] = m->layout = (Layout *)arg->v;
+
+		if (m->layout->preset.nmaster && m->layout->preset.nmaster != -1)
+			m->nmaster = m->layout->preset.nmaster;
+		if (m->layout->preset.nstack && m->layout->preset.nstack != -1)
+			m->nstack = m->layout->preset.nstack;
+
+		m->ltaxis[LAYOUT] = m->layout->preset.layout;
+		m->ltaxis[MASTER] = m->layout->preset.masteraxis;
+		m->ltaxis[STACK]  = m->layout->preset.stack1axis;
+		m->ltaxis[STACK2] = m->layout->preset.stack2axis;
 	}
-	if (arg && arg->v)
-		selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt] = (Layout *)arg->v;
-	selmon->lt[selmon->sellt] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt];
 
-	if (selmon->lt[selmon->sellt]->preset.nmaster && selmon->lt[selmon->sellt]->preset.nmaster != -1)
-		selmon->nmaster = selmon->lt[selmon->sellt]->preset.nmaster;
-	if (selmon->lt[selmon->sellt]->preset.nstack && selmon->lt[selmon->sellt]->preset.nstack != -1)
-		selmon->nstack = selmon->lt[selmon->sellt]->preset.nstack;
+	for (i = 0; i < LTAXIS_LAST; i++) {
+		m->pertag->prevltaxis[m->pertag->curtag][i] = m->pertag->ltaxis[m->pertag->curtag][i];
+		m->pertag->ltaxis[m->pertag->curtag][i] = m->ltaxis[i];
+	}
 
-	selmon->ltaxis[LAYOUT] = selmon->lt[selmon->sellt]->preset.layout;
-	selmon->ltaxis[MASTER] = selmon->lt[selmon->sellt]->preset.masteraxis;
-	selmon->ltaxis[STACK]  = selmon->lt[selmon->sellt]->preset.stack1axis;
-	selmon->ltaxis[STACK2] = selmon->lt[selmon->sellt]->preset.stack2axis;
-
-	selmon->pertag->ltaxis[selmon->pertag->curtag][LAYOUT] = selmon->ltaxis[LAYOUT];
-	selmon->pertag->ltaxis[selmon->pertag->curtag][MASTER] = selmon->ltaxis[MASTER];
-	selmon->pertag->ltaxis[selmon->pertag->curtag][STACK]  = selmon->ltaxis[STACK];
-	selmon->pertag->ltaxis[selmon->pertag->curtag][STACK2] = selmon->ltaxis[STACK2];
-
-	strncpy(selmon->ltsymbol, selmon->lt[selmon->sellt]->symbol, sizeof selmon->ltsymbol);
-	if (selmon->sel)
-		arrangemon(selmon);
-	else
-		drawbar(selmon);
+	strncpy(m->ltsymbol, m->layout->symbol, sizeof m->ltsymbol);
+	if (m->sel) {
+		if (fullarrange)
+			arrange(m);
+		else
+			arrangemon(m);
+	} else
+		drawbar(m);
 }
 
 /* arg > 1.0 will set mfact absolutely */
@@ -2648,7 +2664,7 @@ setmfact(const Arg *arg)
 {
 	float f;
 
-	if (!arg || !selmon->lt[selmon->sellt]->arrange)
+	if (!arg || !selmon->layout->arrange)
 		return;
 	f = arg->f < 1.0 ? arg->f + selmon->mfact : arg->f - 1.0;
 	if (f < 0.05 || f > 0.95)
@@ -2814,7 +2830,7 @@ showhide(Client *c)
 		return;
 	if (ISVISIBLE(c)) {
 		/* show clients top down */
-		if (!c->mon->lt[c->mon->sellt]->arrange && c->sfx != -9999 && !ISFULLSCREEN(c)) {
+		if (!c->mon->layout->arrange && c->sfx != -9999 && !ISFULLSCREEN(c)) {
 			XMoveWindow(dpy, c->win, c->sfx, c->sfy);
 			resize(c, c->sfx, c->sfy, c->sfw, c->sfh, 0);
 			showhide(c->snext);
@@ -2826,7 +2842,7 @@ showhide(Client *c)
 		} else {
 			XMoveWindow(dpy, c->win, c->x, c->y);
 		}
-		if ((!c->mon->lt[c->mon->sellt]->arrange || ISFLOATING(c)) && !ISFULLSCREEN(c))
+		if ((!c->mon->layout->arrange || ISFLOATING(c)) && !ISFULLSCREEN(c))
 			resize(c, c->x, c->y, c->w, c->h, 0);
 		showhide(c->snext);
 	} else {
@@ -3126,24 +3142,24 @@ toggleviewmon(Monitor *m, const Arg *arg)
 	if (enabled(TagIntoStack)) {
 		Client *const selected = m->sel;
 
-		// clients in the master area should be the same after we add a new tag
+		/* clients in the master area should be the same after we add a new tag */
 		Client **const masters = calloc(m->nmaster, sizeof(Client *));
 		if (!masters) {
 			die("fatal: could not calloc() %u bytes \n", m->nmaster * sizeof(Client *));
 		}
-		// collect (from last to first) references to all clients in the master area
+		/* collect (from last to first) references to all clients in the master area */
 		Client *c;
 		size_t j;
 		for (c = nexttiled(m->clients), j = 0; c && j < m->nmaster; c = nexttiled(c->next), ++j)
 			masters[m->nmaster - (j + 1)] = c;
-		// put the master clients at the front of the list
-		// > go from the 'last' master to the 'first'
+		/* put the master clients at the front of the list
+		 * > go from the 'last' master to the 'first' */
 		for (j = 0; j < m->nmaster; ++j)
 			if (masters[j])
 				pop(masters[j]);
 		free(masters);
 
-		// we also want to be sure not to mutate the focus
+		/* we also want to be sure not to mutate the focus */
 		if (m == selmon)
 			focus(selected);
 	}
@@ -3165,9 +3181,8 @@ toggleviewmon(Monitor *m, const Arg *arg)
 		/* apply settings for this view */
 		m->nmaster = m->pertag->nmasters[m->pertag->curtag];
 		m->mfact = m->pertag->mfacts[m->pertag->curtag];
-		m->sellt = m->pertag->sellts[m->pertag->curtag];
-		m->lt[m->sellt] = m->pertag->ltidxs[m->pertag->curtag][m->sellt];
-		m->lt[m->sellt^1] = m->pertag->ltidxs[m->pertag->curtag][m->sellt^1];
+		m->layout = m->pertag->layouts[m->pertag->curtag];
+		m->prevlayout = m->pertag->prevlayouts[m->pertag->curtag];
 		if (enabled(PerTagBar) && m->showbar != m->pertag->showbars[m->pertag->curtag])
 			togglebar(NULL);
 		arrange(m);
@@ -3578,28 +3593,27 @@ viewmon(Monitor *m, const Arg *arg)
 		if (arg->ui == ~0)
 			m->pertag->curtag = 0;
 		else {
-			for (i = 0; !(arg->ui & 1 << i); i++) ;
+			for (i = 0; !(arg->ui & 1 << i); i++);
 			m->pertag->curtag = i + 1;
 		}
 	} else {
 		tmptag = m->tags;
 		m->tags = m->prevtags;
 		m->prevtags = tmptag;
-		tmptag = m->pertag->prevtag;
-		m->pertag->prevtag = m->pertag->curtag;
-		m->pertag->curtag = tmptag;
+		tmptag = m->pertag->curtag;
+		m->pertag->curtag = m->pertag->prevtag;
+		m->pertag->prevtag = tmptag;
 	}
+
 	m->nmaster = m->pertag->nmasters[m->pertag->curtag];
 	m->nstack = m->pertag->nstacks[m->pertag->curtag];
 	m->mfact = m->pertag->mfacts[m->pertag->curtag];
-	m->sellt = m->pertag->sellts[m->pertag->curtag];
-	m->lt[m->sellt] = m->pertag->ltidxs[m->pertag->curtag][m->sellt];
-	m->lt[m->sellt^1] = m->pertag->ltidxs[m->pertag->curtag][m->sellt^1];
 
-	m->ltaxis[LAYOUT] = m->pertag->ltaxis[m->pertag->curtag][LAYOUT];
-	m->ltaxis[MASTER] = m->pertag->ltaxis[m->pertag->curtag][MASTER];
-	m->ltaxis[STACK]  = m->pertag->ltaxis[m->pertag->curtag][STACK];
-	m->ltaxis[STACK2] = m->pertag->ltaxis[m->pertag->curtag][STACK2];
+	m->layout = m->pertag->layouts[m->pertag->curtag];
+	m->prevlayout = m->pertag->prevlayouts[m->pertag->curtag];
+
+	for (i = 0; i < LTAXIS_LAST; i++)
+		m->ltaxis[i] = m->pertag->ltaxis[m->pertag->curtag][i];
 	if (enabled(PerTagBar) && m->showbar != m->pertag->showbars[m->pertag->curtag])
 		togglebar(NULL);
 }
@@ -3685,7 +3699,7 @@ zoom(const Arg *arg)
 	if (c && ISFLOATING(c))
 		togglefloating(&((Arg) { .v = c }));
 
-	if (!c->mon->lt[c->mon->sellt]->arrange || (c && ISFLOATING(c)) || !c)
+	if (!c->mon->layout->arrange || (c && ISFLOATING(c)) || !c)
 		return;
 
 	if (c == nexttiled(c->mon->clients)) {

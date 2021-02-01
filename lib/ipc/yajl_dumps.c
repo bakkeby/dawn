@@ -220,8 +220,8 @@ dump_monitor(yajl_gen gen, Monitor *mon, int is_selected)
         YSTR("old"); YSTR(mon->lastltsymbol);
       )
       YSTR("address"); YMAP(
-        YSTR("current"); YINT((uintptr_t)mon->lt[mon->sellt]);
-        YSTR("old"); YINT((uintptr_t)mon->lt[mon->sellt ^ 1]);
+        YSTR("current"); YINT((uintptr_t)mon->layout);
+        YSTR("old"); YINT((uintptr_t)mon->prevlayout);
       )
     )
 

@@ -6,7 +6,7 @@ setcfact(const Arg *arg)
 
 	c = selmon->sel;
 
-	if (!arg || !c || !selmon->lt[selmon->sellt]->arrange)
+	if (!arg || !c || !selmon->layout->arrange)
 		return;
 	if (!arg->f)
 		f = 1.0;

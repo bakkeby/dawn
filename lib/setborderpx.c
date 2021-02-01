@@ -29,7 +29,7 @@ setborderpx(const Arg *arg)
 		else
 			c->bw = selmon->borderpx;
 
-		if (ISFLOATING(c) || !selmon->lt[selmon->sellt]->arrange)
+		if (ISFLOATING(c) || !selmon->layout->arrange)
 		{
 			if (arg->i != 0 && prev_borderpx + arg->i >= 0)
 				resize(c, c->x, c->y, c->w-(arg->i*2), c->h-(arg->i*2), 0);
