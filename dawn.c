@@ -150,6 +150,7 @@ enum {
 	NetWMAllowedActions,
 	NetWMCheck,
 	NetWMDemandsAttention,
+	NetWMDesktop,
 	NetWMFullPlacement,
 	NetWMFullscreen,
 	NetWMName,
@@ -475,6 +476,7 @@ static void showhide(Client *c);
 static void sigchld(int unused);
 static void spawn(const Arg *arg);
 static void tag(const Arg *arg);
+static void tagclient(Client *c, const Arg *arg);
 static void tagfittomon(Client *c, Monitor *m, int *cx, int *cy, int *cw, int *ch);
 static void tagmon(const Arg *arg);
 static void tagmonresize(Client *c, Monitor *old, Monitor *m);
@@ -882,9 +884,9 @@ clientmessage(XEvent *e)
 	XWindowAttributes wa;
 	XSetWindowAttributes swa;
 	XClientMessageEvent *cme = &e->xclient;
-	Client *c = wintoclient(cme->window);
 	unsigned int i, maximize_vert, maximize_horz;
 	int setfakefullscreen = 0;
+	Client *c;
 
 	if (enabled(Systray) && systray && cme->window == systray->win && cme->message_type == netatom[NetSystemTrayOP]) {
 		/* add systray icons */
@@ -925,15 +927,23 @@ clientmessage(XEvent *e)
 		return;
 	}
 
+	if (cme->window == root) {
+		if (enabled(Debug)) {
+			fprintf(stderr, "clientmessage: received message type of %s (%ld) for root window\n", XGetAtomName(dpy, cme->message_type), cme->message_type);
+			fprintf(stderr, "    - data 0 = %s (%ld)\n", XGetAtomName(dpy, cme->data.l[0]), cme->data.l[0]);
+			fprintf(stderr, "    - data 1 = %s (%ld)\n", XGetAtomName(dpy, cme->data.l[1]), cme->data.l[1]);
+			fprintf(stderr, "    - data 2 = %s (%ld)\n", XGetAtomName(dpy, cme->data.l[2]), cme->data.l[2]);
+		}
+
+		if (cme->message_type == netatom[NetCurrentDesktop])
+			view(&((Arg) { .ui = 1 << cme->data.l[0] }));
+
+		return;
+	}
+
+	c = wintoclient(cme->window);
 	if (!c)
 		return;
-
-	if (enabled(Debug)) {
-		fprintf(stderr, "clientmessage: received message type of %s (%ld) for client %s\n", XGetAtomName(dpy, cme->message_type), cme->message_type, c->name);
-		fprintf(stderr, "    - data 0 = %s (%ld)\n", (cme->data.l[0] == 0 ? "_NET_WM_STATE_REMOVE" : cme->data.l[0] == 1 ? "_NET_WM_STATE_ADD" : cme->data.l[0] == 2 ? "_NET_WM_STATE_TOGGLE" : "?"), cme->data.l[0]);
-		fprintf(stderr, "    - data 1 = %s (%ld)\n", XGetAtomName(dpy, cme->data.l[1]), cme->data.l[1]);
-		fprintf(stderr, "    - data 2 = %s (%ld)\n", XGetAtomName(dpy, cme->data.l[2]), cme->data.l[2]);
-	}
 
 	/* To change the state of a mapped window, a client MUST send a _NET_WM_STATE client message
 	 * to the root window.
@@ -973,6 +983,8 @@ clientmessage(XEvent *e)
 		maximize_horz = (cme->data.l[1] == netatom[NetWMMaximizedHorz] || cme->data.l[2] == netatom[NetWMMaximizedHorz]);
 		if (maximize_vert || maximize_horz)
 			togglemaximize(c, maximize_vert, maximize_horz);
+	} else if (cme->message_type == netatom[NetWMDesktop]) {
+		tagclient(c, &((Arg) { .ui = 1 << cme->data.l[0] }));
 	} else if (cme->message_type == netatom[NetActiveWindow]) {
 		if (enabled(FocusOnNetActive)) {
 			if (c->tags & c->mon->tagset[c->mon->seltags])
@@ -2704,6 +2716,7 @@ setup(void)
 	netatom[NetWMAllowedActions] = XInternAtom(dpy, "_NET_WM_ALLOWED_ACTIONS", False);
 	netatom[NetWMCheck] = XInternAtom(dpy, "_NET_SUPPORTING_WM_CHECK", False);
 	netatom[NetWMDemandsAttention] = XInternAtom(dpy, "_NET_WM_DEMANDS_ATTENTION", False);
+	netatom[NetWMDesktop] = XInternAtom(dpy, "_NET_WM_DESKTOP", False);
 	netatom[NetWMFullPlacement] = XInternAtom(dpy, "_NET_WM_FULL_PLACEMENT", False); /* https://specifications.freedesktop.org/wm-spec/latest/ar01s07.html */
 	netatom[NetWMFullscreen] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
 	netatom[NetWMMaximizedVert] = XInternAtom(dpy, "_NET_WM_STATE_MAXIMIZED_VERT", False);
@@ -2899,17 +2912,24 @@ spawn(const Arg *arg)
 void
 tag(const Arg *arg)
 {
-	if (selmon->sel && arg->ui & TAGMASK) {
-		selmon->sel->tags = arg->ui & TAGMASK;
+	tagclient(selmon->sel, arg);
+}
 
-		if (selmon->sel->reverttags)
-			selmon->sel->reverttags = 0;
+void
+tagclient(Client *c, const Arg *arg)
+{
+	if (!(c && arg->ui & TAGMASK))
+		return;
 
-		focus(NULL);
-		arrange(selmon);
-		if (enabled(ViewOnTag) && (arg->ui & TAGMASK) != selmon->tagset[selmon->seltags])
-			view(arg);
-	}
+	c->tags = arg->ui & TAGMASK;
+
+	if (c->reverttags)
+		c->reverttags = 0;
+
+	focus(NULL);
+	arrange(selmon);
+	if (enabled(ViewOnTag) && (arg->ui & TAGMASK) != c->mon->tagset[c->mon->seltags])
+		view(arg);
 }
 
 void
