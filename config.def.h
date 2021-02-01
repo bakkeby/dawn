@@ -261,9 +261,9 @@ static const char *spcmd3[] = {"r", "st", "-n", "spfm (r)", "-g", "144x41", "-e"
  *  - using the RULE macro
  *
  * A traditional struct table looks like this:
- *    // class      instance  title  wintype  tags mask  monitor
- *    { "Gimp",     NULL,     NULL,  NULL,    1 << 4,    -1 },
- *    { "Firefox",  NULL,     NULL,  NULL,    1 << 7,    -1 },
+ *    // class     role  instance title wintype opacity tags mask flags floatpos monitor scratchkey
+ *    { "Gimp",    NULL, NULL,    NULL, NULL,   0,      1 << 4,   0,    NULL,    -1,     0          },
+ *    { "Firefox", NULL, NULL,    NULL, NULL,   0,      1 << 7,   0,    NULL,    -1,     0          },
  *
  * The RULE macro has the default values set for each field allowing you to only
  * specify the values that are relevant for your rule, e.g.
@@ -271,10 +271,9 @@ static const char *spcmd3[] = {"r", "st", "-n", "spfm (r)", "-g", "144x41", "-e"
  *    RULE(.class = "Gimp", .tags = 1 << 4)
  *    RULE(.class = "Firefox", .tags = 1 << 7)
  *
- * Refer to the Rule struct definition for the list of available fields depending on
- * the patches you enable.
+ * Refer to the Rule struct definition for the list of available fields.
  */
-static const Rule rules[] = {
+static const Rule clientrules[] = {
 	/* xprop(1):
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title

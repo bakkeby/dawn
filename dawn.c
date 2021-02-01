@@ -589,8 +589,8 @@ applyrules(Client *c)
 	if (enabled(Debug))
 		fprintf(stderr, "applyrules: new client %s, class = '%s', instance = '%s', role = '%s', wintype = '%ld'\n", c->name, class, instance, role, wintype);
 
-	for (i = 0; i < LENGTH(rules); i++) {
-		r = &rules[i];
+	for (i = 0; i < LENGTH(clientrules); i++) {
+		r = &clientrules[i];
 		if ((!r->title || strstr(c->name, r->title))
 		&& (!r->class || strstr(class, r->class))
 		&& (!r->role || strstr(role, r->role))
