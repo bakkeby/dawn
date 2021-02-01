@@ -35,7 +35,7 @@ tagswapmon(const Arg *arg)
 		tagmonresize(c, selmon, n);
 		next = c->next;
 		c->mon = n;
-		c->tags = n->tagset[n->seltags]; /* assign tags of target monitor */
+		c->tags = n->tags; /* assign tags of target monitor */
 		attach(c);
 		attachstack(c);
 		if (ISFULLSCREEN(c)) {
@@ -50,7 +50,7 @@ tagswapmon(const Arg *arg)
 		tagmonresize(c, n, selmon);
 		next = c->next;
 		c->mon = selmon;
-		c->tags = selmon->tagset[selmon->seltags]; /* assign tags of target monitor */
+		c->tags = selmon->tags; /* assign tags of target monitor */
 		attach(c);
 		attachstack(c);
 		if (ISFULLSCREEN(c)) {

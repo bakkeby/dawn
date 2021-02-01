@@ -34,7 +34,7 @@ draw_tags(Bar *bar, BarArg *a)
 			continue;
 
 		drw_setscheme(drw, scheme[
-			m->tagset[m->seltags] & 1 << i
+			m->tags & 1 << i
 			? SchemeTagsSel
 			: urg & 1 << i
 			? SchemeUrg

@@ -7,7 +7,7 @@ focusurgent(const Arg *arg)
 	if (c) {
 		for (i = 0; i < NUMTAGS && !((1 << i) & c->tags); i++);
 		if (i < NUMTAGS) {
-			if (((1 << i) & TAGMASK) != selmon->tagset[selmon->seltags])
+			if (((1 << i) & TAGMASK) != selmon->tags)
 				view(&((Arg) { .ui = 1 << i }));
 			focus(c);
 		}

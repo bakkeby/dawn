@@ -260,7 +260,7 @@ flextitledraw(Monitor *m, Client *c, int unused, int x, int w, int tabscheme, Ar
 	}
 	/* Optional tags icons */
 	for (i = 0; i < NUMTAGS; i++) {
-		if ((m->tagset[m->seltags] >> i) & 1)
+		if ((m->tags >> i) & 1)
 			nviewtags++;
 		if ((c->tags >> i) & 1)
 			nclienttags++;

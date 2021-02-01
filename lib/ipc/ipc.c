@@ -1111,7 +1111,7 @@ ipc_send_events(Monitor *mons, Monitor **lastselmon, Monitor *selmon)
 			if (ISURGENT(c))
 				urg |= c->tags;
 		}
-		tagset = m->tagset[m->seltags];
+		tagset = m->tags;
 
 		TagState new_state = {.selected = tagset, .occupied = occ, .urgent = urg};
 

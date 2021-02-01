@@ -35,7 +35,7 @@ togglescratch(const Arg *arg)
 				continue;
 			if (scratchmon != -1 && scratchmon != mon->num)
 				multimonscratch = 1;
-			if (c->mon->tagset[c->mon->seltags] & c->tags && !HIDDEN(c))
+			if (c->mon->tags & c->tags && !HIDDEN(c))
 				++scratchvisible;
 			scratchmon = mon->num;
 			++numscratchpads;
@@ -82,7 +82,7 @@ togglescratch(const Arg *arg)
 				c->tags = 0;
 			} else {
 				XSetWindowBorder(dpy, c->win, scheme[SchemeScratchNorm][ColBorder].pixel);
-				c->tags = c->mon->tagset[c->mon->seltags];
+				c->tags = c->mon->tags;
 				if (ISFLOATING(c))
 					XRaiseWindow(dpy, c->win);
 			}
@@ -94,7 +94,7 @@ togglescratch(const Arg *arg)
 		next = c->next;
 		mon = c->mon;
 		c->mon = selmon;
-		c->tags = selmon->tagset[selmon->seltags];
+		c->tags = selmon->tags;
 		/* Attach scratchpad clients from other monitors at the bottom of the stack */
 		if (selmon->clients) {
 			for (last = selmon->clients; last && last->next; last = last->next);

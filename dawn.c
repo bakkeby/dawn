@@ -61,7 +61,7 @@
 #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
 #define ISVISIBLEONTAG(C, T)    ((C->tags & T) || (C->flags & Sticky))
-#define ISVISIBLE(C)            ISVISIBLEONTAG(C, C->mon->tagset[C->mon->seltags])
+#define ISVISIBLE(C)            ISVISIBLEONTAG(C, C->mon->tags)
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
 #define WIDTH(X)                ((X)->w + 2 * (X)->bw)
@@ -362,9 +362,8 @@ struct Monitor {
 	int gappoh;           /* horizontal outer gaps */
 	int gappov;           /* vertical outer gaps */
 	unsigned int borderpx;
-	unsigned int seltags;
 	unsigned int sellt;
-	unsigned int tagset[2];
+	unsigned int tags, prevtags;
 	int showbar;
 	Client *clients;
 	Client *sel;
@@ -987,7 +986,7 @@ clientmessage(XEvent *e)
 		tagclient(c, &((Arg) { .ui = 1 << cme->data.l[0] }));
 	} else if (cme->message_type == netatom[NetActiveWindow]) {
 		if (enabled(FocusOnNetActive)) {
-			if (c->tags & c->mon->tagset[c->mon->seltags])
+			if (c->tags & c->mon->tags)
 				focus(c);
 			else {
 				for (i = 0; i < NUMTAGS && !((1 << i) & c->tags); i++);
@@ -995,7 +994,7 @@ clientmessage(XEvent *e)
 					if (c != selmon->sel)
 						unfocus(selmon->sel, 0, NULL);
 					selmon = c->mon;
-					if (((1 << i) & TAGMASK) != selmon->tagset[selmon->seltags])
+					if (((1 << i) & TAGMASK) != selmon->tags)
 						view(&((Arg) { .ui = 1 << i }));
 					focus(c);
 					restack(selmon);
@@ -1150,7 +1149,7 @@ createmon(int num)
 	const MonitorRule *mr;
 
 	m = ecalloc(1, sizeof(Monitor));
-	m->tagset[0] = m->tagset[1] = 1;
+	m->tags = m->prevtags = 1;
 	m->mfact = mfact;
 	m->nmaster = nmaster;
 	m->nstack = nstack;
@@ -1165,7 +1164,7 @@ createmon(int num)
 	for (j = 0; j < LENGTH(monrules); j++) {
 		mr = &monrules[j];
 		if ((mr->monitor == -1 || mr->monitor == m->num)
-				&& (mr->tag <= 0 || (m->tagset[0] & (1 << (mr->tag - 1))))) {
+				&& (mr->tag <= 0 || (m->tags & (1 << (mr->tag - 1))))) {
 			layout = MAX(mr->layout, 0);
 			layout = MIN(layout, LENGTH(layouts) - 1);
 			m->lt[0] = &layouts[layout];
@@ -1826,7 +1825,7 @@ manage(Window w, XWindowAttributes *wa)
 		}
 	}
 	if (!c->tags && !c->scratchkey)
-		c->tags = (c->mon->tagset[c->mon->seltags]);
+		c->tags = (c->mon->tags);
 
 	if (!RULED(c)) {
 		if (c->x == c->mon->wx && c->y == c->mon->wy)
@@ -1926,10 +1925,10 @@ manage(Window w, XWindowAttributes *wa)
 	if (!HIDDEN(c))
 		setclientstate(c, NormalState);
 
-	if ((SWITCHTAG(c) || ENABLETAG(c)) && !c->swallowing && c->tags && !(c->tags & m->tagset[m->seltags])) {
+	if ((SWITCHTAG(c) || ENABLETAG(c)) && !c->swallowing && c->tags && !(c->tags & m->tags)) {
 		selmon = m;
 		if (REVERTTAG(c))
-			c->reverttags = m->tagset[m->seltags];
+			c->reverttags = m->tags;
 		if (SWITCHTAG(c)) {
 			if (enabled(Desktop))
 				for (m = mons; m; m = m->next)
@@ -1940,9 +1939,9 @@ manage(Window w, XWindowAttributes *wa)
 		else if (ENABLETAG(c)) {
 			if (enabled(Desktop))
 				for (m = mons; m; m = m->next)
-					m->tagset[m->seltags] = m->tagset[m->seltags] | c->tags;
+					m->tags = m->tags | c->tags;
 			else
-				m->tagset[m->seltags] = m->tagset[m->seltags] | c->tags;
+				m->tags |= c->tags;
 		}
 	}
 
@@ -2376,7 +2375,7 @@ restack(Monitor *m)
 
 	if (enabled(Warp)) {
 		for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
-		if (m == selmon && (m->tagset[m->seltags] & m->sel->tags) && (
+		if (m == selmon && (m->tags & m->sel->tags) && (
 			!(m->ltaxis[MASTER] == MONOCLE && (abs(m->ltaxis[LAYOUT] == NO_SPLIT || !m->nmaster || n <= m->nmaster)))
 			|| ISFLOATING(m->sel))
 		)
@@ -2465,7 +2464,7 @@ sendmon(Client *c, Monitor *m)
 	detachstack(c);
 	arrange(c->mon);
 	c->mon = m;
-	c->tags = m->tagset[m->seltags]; /* assign tags of target monitor */
+	c->tags = m->tags; /* assign tags of target monitor */
 	attachx(c);
 	attachstack(c);
 	arrange(m);
@@ -2832,7 +2831,7 @@ showhide(Client *c)
 		showhide(c->snext);
 	} else {
 		/* optional: auto-hide scratchpads when moving to other tags */
-		if (enabled(AutoHideScratchpads) && c->scratchkey != 0 && !(c->tags & c->mon->tagset[c->mon->seltags]))
+		if (enabled(AutoHideScratchpads) && c->scratchkey != 0 && !(c->tags & c->mon->tags))
 			c->tags = 0;
 
 		/* hide clients bottom up */
@@ -2928,7 +2927,7 @@ tagclient(Client *c, const Arg *arg)
 
 	focus(NULL);
 	arrange(selmon);
-	if (enabled(ViewOnTag) && (arg->ui & TAGMASK) != c->mon->tagset[c->mon->seltags])
+	if (enabled(ViewOnTag) && (arg->ui & TAGMASK) != c->mon->tags)
 		view(arg);
 }
 
@@ -3121,7 +3120,7 @@ toggleview(const Arg *arg)
 void
 toggleviewmon(Monitor *m, const Arg *arg)
 {
-	unsigned int newtagset = m->tagset[m->seltags] ^ (arg->ui & TAGMASK);
+	unsigned int newtagset = m->tags ^ (arg->ui & TAGMASK);
 	int i;
 
 	if (enabled(TagIntoStack)) {
@@ -3150,7 +3149,7 @@ toggleviewmon(Monitor *m, const Arg *arg)
 	}
 
 	if (newtagset) {
-		m->tagset[m->seltags] = newtagset;
+		m->tags = newtagset;
 
 		if (newtagset == ~0) {
 			m->pertag->prevtag = m->pertag->curtag;
@@ -3226,7 +3225,7 @@ unmanage(Client *c, int destroyed)
 	updateclientlist();
 	arrange(m);
 
-	if (reverttags && ((reverttags & TAGMASK) != selmon->tagset[selmon->seltags]))
+	if (reverttags && ((reverttags & TAGMASK) != selmon->tags))
 		view(&((Arg) { .ui = reverttags }));
 }
 
@@ -3548,22 +3547,21 @@ updatewmhints(Client *c)
 void
 view(const Arg *arg)
 {
-	Monitor *m;
-	if (arg->ui && (arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
+	Monitor *m = selmon;
+	if (arg->ui && (arg->ui & TAGMASK) == m->tags)
 	{
 		view(&((Arg) { .ui = 0 }));
 		return;
-    }
-    if (enabled(Desktop)) {
-    	for (m = mons; m; m = m->next)
-    		viewmon(m, arg);
-    	focus(NULL);
-    	arrange(NULL);
-    } else {
-    	viewmon(selmon, arg);
-		focus(NULL);
-		arrange(selmon);
-    }
+	}
+
+	if (enabled(Desktop))
+		for (m = mons; m; m = m->next)
+			viewmon(m, arg);
+	else
+		viewmon(m, arg);
+
+	focus(NULL);
+	arrange(m);
 	updatecurrentdesktop();
 }
 
@@ -3572,11 +3570,11 @@ viewmon(Monitor *m, const Arg *arg)
 {
 	int i;
 	unsigned int tmptag;
-	m->seltags ^= 1; /* toggle sel tagset */
 
 	if (arg->ui & TAGMASK) {
+		m->prevtags = m->tags;
 		m->pertag->prevtag = m->pertag->curtag;
-		m->tagset[m->seltags] = arg->ui & TAGMASK;
+		m->tags = arg->ui & TAGMASK;
 		if (arg->ui == ~0)
 			m->pertag->curtag = 0;
 		else {
@@ -3584,6 +3582,9 @@ viewmon(Monitor *m, const Arg *arg)
 			m->pertag->curtag = i + 1;
 		}
 	} else {
+		tmptag = m->tags;
+		m->tags = m->prevtags;
+		m->prevtags = tmptag;
 		tmptag = m->pertag->prevtag;
 		m->pertag->prevtag = m->pertag->curtag;
 		m->pertag->curtag = tmptag;

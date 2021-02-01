@@ -28,7 +28,7 @@ draw_taggrid(Bar *bar, BarArg *a)
 		x = a->x + lrpad / 2;
 		for (k = 0; k < columns; k++, i++) {
 			if (i < NUMTAGS) {
-				invert = bar->mon->tagset[bar->mon->seltags] & 1 << i ? 0 : 1;
+				invert = bar->mon->tags & 1 << i ? 0 : 1;
 
 				/* Select active color for current square */
 				XSetForeground(drw->dpy, drw->gc, !invert ? scheme[SchemeTagsSel][ColBg].pixel :
@@ -83,9 +83,8 @@ taggridmovetag(const Arg *arg)
 	columns = NUMTAGS / taggridrows + ((NUMTAGS % taggridrows > 0) ? 1 : 0);
 
 	for (i = 0; i < NUMTAGS; ++i) {
-		if (!(selmon->tagset[selmon->seltags] & 1 << i)) {
+		if (!(selmon->tags & 1 << i))
 			continue;
-		}
 		pos = i;
 		row = pos / columns;
 		col = pos % columns;

@@ -8,7 +8,7 @@ tagicon(Monitor *m, int tag)
 		icon = geticon(m, tag, IconsOccupied);
 	else {
 		icon = geticon(m, tag, m->iconset);
-		if (TEXTW(icon) <= lrpad && m->tagset[m->seltags] & 1 << tag)
+		if (TEXTW(icon) <= lrpad && m->tags & 1 << tag)
 			icon = geticon(m, tag, IconsVacant);
 	}
 

@@ -46,11 +46,8 @@ void
 comboviewmon(Monitor *m, const Arg *arg)
 {
 	unsigned newtags = arg->ui & TAGMASK;
-	if (combo) {
-		m->tagset[m->seltags] |= newtags;
-	} else {
-		m->seltags ^= 1;	/*toggle tagset*/
-		if (newtags)
-			viewmon(m, &((Arg) { .ui = newtags }));
-	}
+	if (combo)
+		m->tags |= newtags;
+	else if (newtags)
+		viewmon(m, &((Arg) { .ui = newtags }));
 }

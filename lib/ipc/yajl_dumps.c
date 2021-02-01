@@ -196,8 +196,8 @@ dump_monitor(yajl_gen gen, Monitor *mon, int is_selected)
     )
 
     YSTR("tagset"); YMAP(
-      YSTR("current");  YINT(mon->tagset[mon->seltags]);
-      YSTR("old"); YINT(mon->tagset[mon->seltags ^ 1]);
+      YSTR("current");  YINT(mon->tags);
+      YSTR("old"); YINT(mon->prevtags);
     )
 
     YSTR("tag_state"); dump_tag_state(gen, mon->tagstate);
