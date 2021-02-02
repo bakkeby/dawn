@@ -137,6 +137,7 @@ enum {
 	NetActiveWindow,
 	NetClientList,
 	NetClientListStacking,
+	NetCloseWindow,
 	NetCurrentDesktop,
 	NetDesktopNames,
 	NetDesktopViewport,
@@ -1770,7 +1771,11 @@ keypress(XEvent *e)
 void
 killclient(const Arg *arg)
 {
-	Client *c = selmon->sel;
+	Client *c;
+	if (!arg || !arg->v)
+		c = selmon->sel;
+	else
+		c = (Client*)arg->v;
 	if (!c || ISPERMANENT(c))
 		return;
 	if (!sendevent(c->win, wmatom[WMDelete], NoEventMask, wmatom[WMDelete], CurrentTime, 0, 0, 0)) {
@@ -2718,6 +2723,7 @@ setup(void)
 	netatom[NetActiveWindow] = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
 	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", False);
 	netatom[NetClientListStacking] = XInternAtom(dpy, "_NET_CLIENT_LIST_STACKING", False);
+	netatom[NetCloseWindow] = XInternAtom(dpy, "_NET_CLOSE_WINDOW", False);
 	netatom[NetCurrentDesktop] = XInternAtom(dpy, "_NET_CURRENT_DESKTOP", False);
 	netatom[NetDesktopNames] = XInternAtom(dpy, "_NET_DESKTOP_NAMES", False);
 	netatom[NetDesktopViewport] = XInternAtom(dpy, "_NET_DESKTOP_VIEWPORT", False);
