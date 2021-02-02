@@ -32,7 +32,7 @@ tagothermon(const Arg *arg, int dir)
 		return;
 	sel = selmon->sel;
 	newmon = dirtomon(dir);
-	sendmon(sel, newmon);
+	sendmon(sel, newmon, newmon->tags);
 	if (arg->ui & TAGMASK) {
 		sel->tags = arg->ui & TAGMASK;
 		focus(NULL);

@@ -34,12 +34,14 @@ setcurrentdesktop(void)
 void
 setdesktopnames(void)
 {
+	Monitor *m;
 	int i;
 	XTextProperty text;
-	char *tags[NUMTAGS];
-	for (i = 0; i < NUMTAGS; i++)
-		tags[i] = tagicon(selmon, i);
-	Xutf8TextListToTextProperty(dpy, tags, NUMTAGS, XUTF8StringStyle, &text);
+	char *tags[NUMTAGS * num_mons];
+	for (m = mons; m; m = m->next)
+		for (i = 0; i < NUMTAGS; i++)
+			tags[i + NUMTAGS * m->num] = tagicon(m, i);
+	Xutf8TextListToTextProperty(dpy, tags, NUMTAGS * num_mons, XUTF8StringStyle, &text);
 	XSetTextProperty(dpy, root, &text, netatom[NetDesktopNames]);
 }
 
@@ -62,7 +64,6 @@ setclientflags(Client *c)
 void
 setclientfields(Client *c)
 {
-	fprintf(stderr, "setclientfields: client %s c->scratchkey = %d\n", c->name, c->scratchkey);
 	unsigned long data[] = { c->mon->num | (c->id << 4) | (c->tags << 12) | (c->scratchkey << 21) };
 	XChangeProperty(dpy, c->win, clientatom[DawnClientTags], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
 }
@@ -84,7 +85,6 @@ getclientfields(Client *c)
 	Atom fields = getatomprop(c, clientatom[DawnClientTags], AnyPropertyType);
 	if (fields) {
 		c->scratchkey = (fields >> 21);
-		fprintf(stderr, "getclientfields: client %s c->scratchkey = %d\n", c->name, c->scratchkey);
 		c->tags = (fields >> 12) & TAGMASK;
 		c->id = (fields & 0xFF0) >> 4;
 		for (m = mons; m; m = m->next)
@@ -123,7 +123,7 @@ getmonitorstate(Monitor *m)
 void
 setnumdesktops(void)
 {
-	long data[] = { NUMTAGS };
+	long data[] = { NUMTAGS * num_mons };
 	XChangeProperty(dpy, root, netatom[NetNumberOfDesktops], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
 }
 
@@ -142,6 +142,6 @@ updatecurrentdesktop(void)
 	while (*rawdata >> (i + 1)) {
 		i++;
 	}
-	long data[] = { i };
+	long data[] = { i + NUMTAGS * selmon->num };
 	XChangeProperty(dpy, root, netatom[NetCurrentDesktop], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
 }

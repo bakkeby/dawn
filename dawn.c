@@ -464,7 +464,7 @@ static void restack(Monitor *m);
 static void run(void);
 static void scan(void);
 static int sendevent(Window w, Atom proto, int m, long d0, long d1, long d2, long d3, long d4);
-static void sendmon(Client *c, Monitor *m);
+static void sendmon(Client *c, Monitor *m, unsigned int tags);
 static void setclientstate(Client *c, long state);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen, int setfakefullscreen);
@@ -523,6 +523,7 @@ static int bh;               /* bar geometry */
 static int lrpad;            /* sum of left and right padding for text */
 static int force_warp = 0;   /* force warp in some situations, e.g. killclient */
 static int ignore_warp = 0;  /* force skip warp in some situations, e.g. dragmfact, dragcfact */
+static int num_mons;         /* short hand reference for the number of monitors in play, see ewmh.c */
 
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
@@ -887,6 +888,7 @@ clientmessage(XEvent *e)
 	unsigned int i, maximize_vert, maximize_horz;
 	int setfakefullscreen = 0;
 	Client *c;
+	Monitor *m;
 
 	if (enabled(Systray) && systray && cme->window == systray->win && cme->message_type == netatom[NetSystemTrayOP]) {
 		/* add systray icons */
@@ -935,8 +937,11 @@ clientmessage(XEvent *e)
 			fprintf(stderr, "    - data 2 = %s (%ld)\n", XGetAtomName(dpy, cme->data.l[2]), cme->data.l[2]);
 		}
 
-		if (cme->message_type == netatom[NetCurrentDesktop])
-			view(&((Arg) { .ui = 1 << cme->data.l[0] }));
+		if (cme->message_type == netatom[NetCurrentDesktop]) {
+			for (m = mons; m && m->num != (cme->data.l[0] / NUMTAGS); m = m->next);
+			selmon = m;
+			view(&((Arg) { .ui = 1 << (cme->data.l[0] % NUMTAGS) }));
+		}
 
 		return;
 	}
@@ -984,7 +989,11 @@ clientmessage(XEvent *e)
 		if (maximize_vert || maximize_horz)
 			togglemaximize(c, maximize_vert, maximize_horz);
 	} else if (cme->message_type == netatom[NetWMDesktop]) {
-		tagclient(c, &((Arg) { .ui = 1 << cme->data.l[0] }));
+		for (m = mons; m && m->num != (cme->data.l[0] / NUMTAGS); m = m->next);
+		if (m != c->mon)
+			sendmon(c, m, 1 << (cme->data.l[0] % NUMTAGS));
+		else
+			tagclient(c, &((Arg) { .ui = (1 << (cme->data.l[0] % NUMTAGS)) }));
 	} else if (cme->message_type == netatom[NetActiveWindow]) {
 		if (enabled(FocusOnNetActive)) {
 			if (c->tags & c->mon->tags)
@@ -2086,7 +2095,7 @@ movemouse(const Arg *arg)
 	} while (ev.type != ButtonRelease);
 	XUngrabPointer(dpy, CurrentTime);
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
-		sendmon(c, m);
+		sendmon(c, m, m->tags);
 		selmon = m;
 		focus(NULL);
 	}
@@ -2347,7 +2356,7 @@ resizemouse(const Arg *arg)
 	XUngrabPointer(dpy, CurrentTime);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
-		sendmon(c, m);
+		sendmon(c, m, m->tags);
 		selmon = m;
 		focus(NULL);
 	}
@@ -2459,7 +2468,7 @@ scan(void)
 }
 
 void
-sendmon(Client *c, Monitor *m)
+sendmon(Client *c, Monitor *m, unsigned int tags)
 {
 	if (c->mon == m)
 		return;
@@ -2467,20 +2476,26 @@ sendmon(Client *c, Monitor *m)
 	unfocus(c, 1, NULL);
 	detach(c);
 	detachstack(c);
-	arrange(c->mon);
+	if (c->tags & c->mon->tags)
+		arrange(c->mon);
+	else
+		drawbar(c->mon);
 	c->mon = m;
-	c->tags = m->tags; /* assign tags of target monitor */
+	c->tags = tags;
+	c->reverttags = 0;
 	attachx(c);
 	attachstack(c);
-	arrange(m);
 
-	if (hadfocus) {
-		focus(c);
-		restack(m);
+	if (m->tags & tags) {
+		arrange(m);
+
+		if (hadfocus) {
+			focus(c);
+			restack(m);
+		} else
+			focus(NULL);
 	} else
-		focus(NULL);
-	if (c->reverttags)
-		c->reverttags = 0;
+		drawbar(m);
 }
 
 void
@@ -2948,7 +2963,7 @@ tagclient(Client *c, const Arg *arg)
 		c->reverttags = 0;
 
 	focus(NULL);
-	arrange(selmon);
+	arrange(c->mon);
 	if (enabled(ViewOnTag) && (arg->ui & TAGMASK) != c->mon->tags)
 		view(arg);
 }
@@ -2976,14 +2991,14 @@ tagmon(const Arg *arg)
 	tagmonresize(c, c->mon, n);
 	if (ISFULLSCREEN(c)) {
 		setflag(c, FullScreen, 0);
-		sendmon(c, n);
+		sendmon(c, n, n->tags);
 		setflag(c, FullScreen, 1);
 		if (!ISFAKEFULLSCREEN(c)) {
 			resizeclient(c, c->mon->mx, c->mon->my, c->mon->mw, c->mon->mh);
 			XRaiseWindow(dpy, c->win);
 		}
 	} else {
-		sendmon(c, dirtomon(arg->i));
+		sendmon(c, n, n->tags);
 		if (ISFLOATING(c))
 			resizeclient(c, c->x, c->y, c->w, c->h);
 	}
@@ -3427,6 +3442,7 @@ updategeom(void)
 				cleanupmon(m);
 			}
 		}
+		num_mons = nn;
 		free(unique);
 	} else
 #endif /* XINERAMA */
