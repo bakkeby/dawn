@@ -2494,8 +2494,10 @@ sendmon(Client *c, Monitor *m, unsigned int tags)
 			restack(m);
 		} else
 			focus(NULL);
-	} else
+	} else {
+		XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
 		drawbar(m);
+	}
 }
 
 void
