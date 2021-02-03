@@ -12,7 +12,6 @@ tagicon(Monitor *m, int tag)
 			icon = geticon(m, tag, IconsVacant);
 	}
 
-	fprintf(stderr, "tagicon: looking up icon for tag %d on monitor %d, returning %s\n", tag, m->num, icon);
 	return icon;
 }
 
