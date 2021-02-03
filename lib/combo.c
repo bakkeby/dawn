@@ -40,6 +40,7 @@ comboview(const Arg *arg)
 		arrange(selmon);
 	}
 	combo = 1;
+	updatecurrentdesktop();
 }
 
 void
