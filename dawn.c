@@ -1844,13 +1844,15 @@ manage(Window w, XWindowAttributes *wa)
 		if (c->x == c->mon->wx && c->y == c->mon->wy)
 			addflag(c, Centered);
 
-		if (!ISTRANSIENT(c)) {
+		if (!ISTRANSIENT(c))
 			applyrules(c);
-			term = termforwin(c);
-			if (term)
-				c->mon = term->mon;
-		}
 	}
+
+	if (!ISTRANSIENT(c))
+		term = termforwin(c);
+
+	if (term)
+		c->mon = term->mon;
 
 	c->bw = (NOBORDER(c) ? 0 : c->mon->borderpx);
 
