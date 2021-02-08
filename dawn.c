@@ -3457,6 +3457,7 @@ updategeom(void)
 			mons->mh = mons->wh = sh;
 			updatebarpos(mons);
 		}
+		num_mons = 1;
 	}
 	if (dirty) {
 		selmon = mons;
