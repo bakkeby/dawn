@@ -231,7 +231,9 @@ flextitledraw(Monitor *m, Client *c, int unused, int x, int w, int tabscheme, Ar
 
 	int i, nclienttags = 0, nviewtags = 0, pad = lrpad / 2;
 	int clientscheme = (
-		c->scratchkey != 0 && c == selmon->sel
+		ISMARKED(c)
+		? SchemeMarked
+		: c->scratchkey != 0 && c == selmon->sel
 		? SchemeScratchSel
 		: c->scratchkey != 0
 		? SchemeScratchNorm

@@ -60,6 +60,8 @@
 #define CLEANMASK(mask)         (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
+#define INTERSECTC(x,y,w,h,z)   (MAX(0, MIN((x)+(w),(z)->x+(z)->w) - MAX((x),(z)->x)) \
+                               * MAX(0, MIN((y)+(h),(z)->y+(z)->h) - MAX((y),(z)->y)))
 #define ISVISIBLEONTAG(C, T)    ((C->tags & T) || (C->flags & Sticky))
 #define ISVISIBLE(C)            ISVISIBLEONTAG(C, C->mon->tags)
 #define LENGTH(X)               (sizeof X / sizeof X[0])
@@ -71,6 +73,7 @@
 #define TEXTWM(X)               (drw_fontset_getwidth(drw, (X), True) + lrpad)
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X), False) + lrpad)
 #define HIDDEN(C)               ((getstate(C->win) == IconicState))
+#define CLIENT                  (arg && arg->v ? (Client*)arg->v : selmon->sel)
 
 /* enums */
 enum {
@@ -96,6 +99,7 @@ enum {
 	SchemeTagsSel,
 	SchemeHid,
 	SchemeUrg,
+	SchemeMarked,
 	SchemeScratchNorm,
 	SchemeScratchSel,
 	SchemeFlexActTTB,
@@ -310,7 +314,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	char scratchkey;
-	unsigned int id;
+	unsigned int idx;
 	unsigned int tags;
 	unsigned int reverttags; /* holds the original tag info from when the client was opened */
 	double opacity;
@@ -455,6 +459,8 @@ static Client *prevtiled(Client *c);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
+static void readclientstackingorder(void);
+static Client *recttoclient(int x, int y, int w, int h, int include_floating);
 static Monitor *recttomon(int x, int y, int w, int h);
 static void resize(Client *c, int x, int y, int w, int h, int interact);
 static void resizeclient(Client *c, int x, int y, int w, int h);
@@ -1275,7 +1281,7 @@ void
 detach(Client *c)
 {
 	Client **tc;
-	c->id = 0;
+	c->idx = 0;
 	for (tc = &c->mon->clients; *tc && *tc != c; tc = &(*tc)->next);
 	*tc = c->next;
 	c->next = NULL;
@@ -1780,11 +1786,7 @@ keypress(XEvent *e)
 void
 killclient(const Arg *arg)
 {
-	Client *c;
-	if (!arg || !arg->v)
-		c = selmon->sel;
-	else
-		c = (Client*)arg->v;
+	Client *c = CLIENT;
 	if (!c || ISPERMANENT(c))
 		return;
 	if (!sendevent(c->win, wmatom[WMDelete], NoEventMask, wmatom[WMDelete], CurrentTime, 0, 0, 0)) {
@@ -2211,6 +2213,44 @@ quit(const Arg *arg)
 
 	for (m = mons; m; m = m->next)
 		persistmonitorstate(m);
+}
+
+/* This reads the stacking order on the X server side and updates the client
+ * index (idx) value accordingly. This information can later be used to determine
+ * whether one window is on top of another, for example in recttoclient.
+ */
+void
+readclientstackingorder(void)
+{
+	unsigned int i, num;
+	Window d1, d2, *wins = NULL;
+	Client *c;
+
+	if (XQueryTree(dpy, root, &d1, &d2, &wins, &num)) {
+		for (i = 0; i < num; i++) {
+			if ((c = wintoclient(wins[i])))
+				c->idx = i + 1;
+		}
+
+		XFree(wins);
+	}
+}
+
+Client *
+recttoclient(int x, int y, int w, int h, int include_floating)
+{
+	Client *c, *r = NULL;
+	int a, area = 1;
+
+	for (c = selmon->stack; c; c = c->snext) {
+		if (!ISVISIBLE(c) || HIDDEN(c) || (ISFLOATING(c) && !include_floating))
+			continue;
+		if ((a = INTERSECTC(x, y, w, h, c)) >= area && (!r || r->idx < c->idx)) {
+			area = a;
+			r = c;
+		}
+	}
+	return r;
 }
 
 Monitor *
@@ -3068,9 +3108,7 @@ togglebar(const Arg *arg)
 void
 togglefloating(const Arg *arg)
 {
-	Client *c = selmon->sel;
-	if (arg && arg->v)
-		c = (Client*)arg->v;
+	Client *c = CLIENT;
 	if (!c)
 		return;
 	if (ISFULLSCREEN(c) && !ISFAKEFULLSCREEN(c)) /* no support for fullscreen windows */
@@ -3717,9 +3755,7 @@ xerrorstart(Display *dpy, XErrorEvent *ee)
 void
 zoom(const Arg *arg)
 {
-	Client *c = selmon->sel, *at = NULL, *cold, *cprevious = NULL, *p;;
-	if (arg && arg->v)
-		c = (Client*)arg->v;
+	Client *c = CLIENT, *at = NULL, *cold, *cprevious = NULL, *p;
 	if (!c)
 		return;
 

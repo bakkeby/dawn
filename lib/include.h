@@ -41,6 +41,7 @@
 #include "ipc/ipc.h"
 #include "ipc/util.h"
 #include "killunsel.h"
+#include "mark.h"
 #include "nomodbuttons.h"
 #include "push.h"
 #include "restartsig.h"

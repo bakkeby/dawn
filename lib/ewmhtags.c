@@ -12,10 +12,11 @@ persistmonitorstate(Monitor *m)
 
 	/* set dawn client atoms */
 	for (i = 1, c = m->clients; c; c = c->next, ++i) {
-		c->id = i;
+		c->idx = i;
 		setclientflags(c);
 		setclientfields(c);
 		if (c->swallowing) {
+			c->swallowing->idx = i;
 			setclientflags(c->swallowing);
 			setclientfields(c->swallowing);
 		}
@@ -64,7 +65,7 @@ setclientflags(Client *c)
 void
 setclientfields(Client *c)
 {
-	unsigned long data[] = { c->mon->num | (c->id << 4) | (c->tags << 12) | (c->scratchkey << 21) };
+	unsigned long data[] = { c->mon->num | (c->idx << 4) | (c->tags << 12) | (c->scratchkey << 21) };
 	XChangeProperty(dpy, c->win, clientatom[DawnClientTags], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
 }
 
@@ -74,8 +75,10 @@ getclientflags(Client *c)
 	unsigned long flags1 = getatomprop(c, clientatom[DawnClientFlags1], AnyPropertyType) & 0xFFFFFFFF;
 	unsigned long flags2 = getatomprop(c, clientatom[DawnClientFlags2], AnyPropertyType);
 
-	if (flags1 || flags2)
+	if (flags1 || flags2) {
 		c->flags = flags1 | (flags2 << 32);
+		removeflag(c, Marked);
+	}
 }
 
 void
@@ -86,7 +89,7 @@ getclientfields(Client *c)
 	if (fields) {
 		c->scratchkey = (fields >> 21);
 		c->tags = (fields >> 12) & TAGMASK;
-		c->id = (fields & 0xFF0) >> 4;
+		c->idx = (fields & 0xFF0) >> 4;
 		for (m = mons; m; m = m->next)
 			if (m->num == (fields & 0xF)) {
 				c->mon = m;
