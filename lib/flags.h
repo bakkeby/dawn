@@ -74,6 +74,7 @@ static const unsigned long
 	FlagPlaceholder9223372036854775808 = 0x8000000000000000;
 
 #define ALWAYSONTOP(C) (C->flags & AlwaysOnTop)
+#define HIDDEN(C) (C->flags & Hidden)
 #define ISFLOATING(C) (C->flags & Floating)
 #define ISFIXED(C) (C->flags & Fixed)
 #define ISLOCKED(C) (C->flags & Locked)

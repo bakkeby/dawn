@@ -72,7 +72,6 @@
 #define TAGMASK                 ((1 << NUMTAGS) - 1)
 #define TEXTWM(X)               (drw_fontset_getwidth(drw, (X), True) + lrpad)
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X), False) + lrpad)
-#define HIDDEN(C)               ((getstate(C->win) == IconicState))
 #define CLIENT                  (arg && arg->v ? (Client*)arg->v : selmon->sel)
 
 /* enums */
@@ -1023,6 +1022,7 @@ clientmessage(XEvent *e)
 			hide(c);
 		else if (cme->data.l[0] == NormalState && HIDDEN(c))
 			show(c);
+		arrange(c->mon);
 	} else if (cme->message_type == netatom[NetWMMoveResize]) {
 		resizemouse(&((Arg) { .v = c }));
 	}
@@ -1937,10 +1937,7 @@ manage(Window w, XWindowAttributes *wa)
 		(unsigned char *) &(c->win), 1);
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h); /* some windows require this */
 
-	if ((c->flags & Hidden) && !HIDDEN(c))
-		hide(c);
-	if (!HIDDEN(c))
-		setclientstate(c, NormalState);
+	setclientstate(c, NormalState);
 
 	if ((SWITCHTAG(c) || ENABLETAG(c)) && !c->swallowing && c->tags && !(c->tags & m->tags)) {
 		selmon = m;
@@ -1969,8 +1966,8 @@ manage(Window w, XWindowAttributes *wa)
 	}
 
 	arrange(m); // m is inentionally NULL if switchtag or enabletag
-	if (!HIDDEN(c))
-		XMapWindow(dpy, c->win);
+
+	XMapWindow(dpy, c->win);
 
 	if (focusclient)
 		focus(NULL);
@@ -2893,7 +2890,7 @@ showhide(Client *c)
 {
 	if (!c)
 		return;
-	if (ISVISIBLE(c)) {
+	if (ISVISIBLE(c) && !HIDDEN(c)) {
 		/* show clients top down */
 		if (!c->mon->layout->arrange && c->sfx != -9999 && !ISFULLSCREEN(c)) {
 			XMoveWindow(dpy, c->win, c->sfx, c->sfy);
