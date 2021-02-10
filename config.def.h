@@ -30,6 +30,7 @@ static const char buttonbar[]            = "⛶";
 static const unsigned int systrayspacing = 2;   /* systray spacing */
 static char *toggle_float_pos            = "50% 50% 80% 80%"; // default floating position when triggering togglefloatpos
 static const double defaultopacity       = 0;   /* client default opacity, e.g. 0.75. 0 means don't apply opacity. */
+static const double moveresizeopacity    = 0;   /* client opacity when being moved or resized, 0 means don't apply opacity */
 
 /* Indicators: see patch/bar_indicators.h for options */
 static int tagindicatortype              = INDICATOR_BOTTOM_BAR_SLIM;
@@ -630,7 +631,7 @@ static Button buttons[] = {
 	{ ClkClientWin,              MODKEY|Shift,            Button8,        markmouse,        {0} }, // unmarks clients under the mouse cursor for group action
 	{ ClkClientWin,              MODKEY,                  Button9,        markmouse,        {2} }, // toggles marking of clients under the mouse cursor for group action
 	{ ClkClientWin,              MODKEY,                  Button1,        movemouse,        {0} }, // moves a client window into a floating position
-	// { ClkClientWin,              MODKEY|Ctrl,             Button1,        placemouse,       {1} }, // moves a client window between tiled positions (0 = relative to mouse cursor, 1 = relative to window center, 2 = mouse cursor warps to window center)
+	{ ClkClientWin,              MODKEY|Ctrl,             Button1,        placemouse,       {1} }, // moves a client window between tiled positions (0 = relative to mouse cursor, 1 = relative to window center, 2 = mouse cursor warps to window center)
 	{ ClkClientWin,              MODKEY|Alt,              Button2,        togglefloating,   {0} }, // toggles between tiled and floating arrangement for given client
 	{ ClkClientWin,              MODKEY,                  Button3,        resizemouse,      {0} }, // change the size of a floating client window
 	{ ClkClientWin,              0,                       Button8,        movemouse,        {0} }, // move a client window using extra mouse buttons (previous)

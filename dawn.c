@@ -455,6 +455,7 @@ static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
 static Client *nexttiled(Client *c);
 static Client *prevtiled(Client *c);
+static void placemouse(const Arg *arg);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
@@ -1881,6 +1882,7 @@ manage(Window w, XWindowAttributes *wa)
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
 	configure(c); /* propagates border_width, if size doesn't change */
 	updatesizehints(c);
+	updateclientdesktop(c);
 
 	/* If the client indicates that it is in fullscreen, or if the FullScreen flag has been
 	 * explictly set via client rules, then enable fullscreen now. */
@@ -1926,7 +1928,7 @@ manage(Window w, XWindowAttributes *wa)
 		/* Do not let swallowed client steal focus unless the terminal has focus */
 		focusclient = (term == selmon->sel);
 	} else {
-		attachx(c);
+		attachx(c, 0, NULL);
 
 		if (focusclient || !m->sel || !m->stack)
 			attachstack(c);
@@ -2047,11 +2049,16 @@ movemouse(const Arg *arg)
 	Monitor *m;
 	XEvent ev;
 	Time lasttime = 0;
+	double prevopacity;
 
 	if (!(c = selmon->sel))
 		return;
 	if (ISFULLSCREEN(c) && !ISFAKEFULLSCREEN(c)) /* no support moving fullscreen windows by mouse */
 		return;
+	if (moveresizeopacity) {
+		prevopacity = c->opacity;
+		opacity(c, moveresizeopacity);
+	}
 	restack(selmon);
 	ocx = c->x;
 	ocy = c->y;
@@ -2106,6 +2113,8 @@ movemouse(const Arg *arg)
 		focus(NULL);
 	}
 	removeflag(c, MoveResize);
+	if (moveresizeopacity)
+		opacity(c, prevopacity);
 }
 
 Client *
@@ -2121,6 +2130,130 @@ prevtiled(Client *c)
 	Client *p, *r;
 	for (p = nexttiled(c->mon->clients), r = NULL; p && p != c && (r = p); p = nexttiled(p->next));
 	return r;
+}
+
+void
+placemouse(const Arg *arg)
+{
+	int x, y, px, py, ocx, ocy, nx = -9999, ny = -9999, freemove = 0;
+	Client *c, *r = NULL, *prevr;
+	Monitor *m;
+	XEvent ev;
+	XWindowAttributes wa;
+	double prevopacity;
+	Time lasttime = 0;
+	int attachmode, prevattachmode;
+	attachmode = prevattachmode = AttachMaster;
+
+	if (!(c = selmon->sel) || !c->mon->layout->arrange) /* no support for placemouse when floating layout is used */
+		return;
+	if (ISFULLSCREEN(c)) /* no support placing fullscreen windows by mouse */
+		return;
+	restack(selmon);
+	prevr = c;
+	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
+		None, cursor[CurMove]->cursor, CurrentTime) != GrabSuccess)
+		return;
+
+	addflag(c, MovePlace);
+	removeflag(c, Floating);
+	if (moveresizeopacity) {
+		prevopacity = c->opacity;
+		opacity(c, moveresizeopacity);
+	}
+
+	XGetWindowAttributes(dpy, c->win, &wa);
+	ocx = wa.x;
+	ocy = wa.y;
+
+	if (arg->i == 2) // warp cursor to client center
+		XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, WIDTH(c) / 2, HEIGHT(c) / 2);
+
+	if (!getrootptr(&x, &y))
+		return;
+
+	do {
+		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
+		switch (ev.type) {
+		case ConfigureRequest:
+		case Expose:
+		case MapRequest:
+			handler[ev.type](&ev);
+			break;
+		case MotionNotify:
+			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
+				continue;
+			lasttime = ev.xmotion.time;
+
+			nx = ocx + (ev.xmotion.x - x);
+			ny = ocy + (ev.xmotion.y - y);
+
+			if (!freemove && (abs(nx - ocx) > snap || abs(ny - ocy) > snap))
+				freemove = 1;
+
+			if (freemove)
+				XMoveWindow(dpy, c->win, nx, ny);
+
+			if ((m = recttomon(ev.xmotion.x, ev.xmotion.y, 1, 1)) && m != selmon)
+				selmon = m;
+
+			if (arg->i == 1) { // tiled position is relative to the client window center point
+				px = nx + wa.width / 2;
+				py = ny + wa.height / 2;
+			} else { // tiled position is relative to the mouse cursor
+				px = ev.xmotion.x;
+				py = ev.xmotion.y;
+			}
+
+			r = recttoclient(px, py, 1, 1, 0);
+			if (!r || r == c)
+				break;
+
+			if ((((float)(r->y + r->h - py) / r->h) > ((float)(r->x + r->w - px) / r->w)
+			    	&& (abs(r->y - py) < r->h / 2)) || (abs(r->x - px) < r->w / 2))
+				attachmode = AttachAbove;
+			else
+				attachmode = AttachBelow;
+
+			if ((r && r != prevr) || (attachmode != prevattachmode)) {
+				detachstack(c);
+				detach(c);
+				if (c->mon != r->mon) {
+					arrangemon(c->mon);
+					c->tags = r->mon->tags;
+				}
+
+				r->mon->sel = r;
+				selmon = r->mon;
+
+				attachx(c, attachmode, r->mon);
+				attachstack(c);
+				arrangemon(r->mon);
+				prevr = r;
+				prevattachmode = attachmode;
+			}
+			break;
+		}
+	} while (ev.type != ButtonRelease);
+	XUngrabPointer(dpy, CurrentTime);
+
+	if ((m = recttomon(ev.xmotion.x, ev.xmotion.y, 1, 1)) && m != c->mon) {
+		detach(c);
+		detachstack(c);
+		arrangemon(c->mon);
+		attachx(c, AttachBottom, m);
+		attachstack(c);
+		selmon = m;
+		focus(c);
+	}
+
+	removeflag(c, MovePlace);
+
+	if (nx != -9999)
+		resize(c, nx, ny, c->w, c->h, 0);
+	arrangemon(c->mon);
+	if (moveresizeopacity)
+		opacity(c, prevopacity);
 }
 
 void
@@ -2247,7 +2380,7 @@ recttoclient(int x, int y, int w, int h, int include_floating)
 	for (c = selmon->stack; c; c = c->snext) {
 		if (!ISVISIBLE(c) || HIDDEN(c) || (ISFLOATING(c) && !include_floating))
 			continue;
-		if ((a = INTERSECTC(x, y, w, h, c)) >= area && (!r || r->idx < c->idx)) {
+		if ((a = INTERSECTC(x, y, w, h, c)) >= area && (!r || r->idx < c->idx || r->mon != c->mon)) {
 			area = a;
 			r = c;
 		}
@@ -2311,6 +2444,11 @@ resizeclientpad(Client *c, int x, int y, int w, int h, int tw, int th)
 		}
 	}
 
+	if (!(c->tags & c->mon->tags) || MOVEPLACE(c)) {
+		addflag(c, NeedResize);
+		return;
+	}
+
 	if (enabled(NoBorders) && ((nexttiled(c->mon->clients) == c && !nexttiled(c->next)))
 		&& (ISFAKEFULLSCREEN(c) || !ISFULLSCREEN(c))
 		&& !ISFLOATING(c)
@@ -2345,11 +2483,16 @@ resizemouse(const Arg *arg)
 	Monitor *m;
 	XEvent ev;
 	Time lasttime = 0;
+	double prevopacity;
 
 	if (!(c = selmon->sel))
 		return;
 	if (ISFULLSCREEN(c) && !ISFAKEFULLSCREEN(c)) /* no support resizing fullscreen windows by mouse */
 		return;
+	if (moveresizeopacity) {
+		prevopacity = c->opacity;
+		opacity(c, moveresizeopacity);
+	}
 	restack(selmon);
 	ocx = c->x;
 	ocy = c->y;
@@ -2405,6 +2548,8 @@ resizemouse(const Arg *arg)
 		focus(NULL);
 	}
 	removeflag(c, MoveResize);
+	if (moveresizeopacity)
+		opacity(c, prevopacity);
 }
 
 void
@@ -2527,10 +2672,8 @@ sendmon(Client *c, Monitor *m, unsigned int tags)
 		detach(c);
 		detachstack(c);
 
-		c->mon = m;
 		c->tags = tags;
-		c->reverttags = 0;
-		attachx(c);
+		attachx(c, AttachBottom, m);
 		attachstack(c);
 	}
 
@@ -3011,8 +3154,7 @@ tagclient(Client *c, const Arg *arg)
 			unfocus(c, 1, NULL);
 			detach(c);
 			detachstack(c);
-			c->mon = selmon;
-			attachx(c);
+			attachx(c, AttachBottom, selmon);
 			attachstack(c);
 		}
 

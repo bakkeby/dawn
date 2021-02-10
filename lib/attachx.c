@@ -1,10 +1,15 @@
 void
-attachx(Client *c)
+attachx(Client *c, unsigned long mode, Monitor *m)
 {
-	Client *at;
+	if (!c)
+		return;
+
+	Client *at, *last;
 	unsigned int n;
 	unsigned long attachmode
-		= c->flags & AttachMaster
+		= mode
+		? mode
+		: c->flags & AttachMaster
 		? AttachMaster
 		: c->flags & AttachAbove
 		? AttachAbove
@@ -16,50 +21,65 @@ attachx(Client *c)
 		? AttachBottom
 		: attachdefault;
 
+	for (last = c; last && last->next; last = last->next);
+
+	if (!m)
+		m = c->mon;
+	else if (c->mon != m) {
+		for (at = c; at; at = at->next) {
+			at->mon = m;
+			at->reverttags = 0;
+			updateclientdesktop(at);
+		}
+	}
+
 	if (c->idx > 0) { /* then the client has a designated position in the client list */
-		for (at = c->mon->clients; at; at = at->next)
+		for (at = m->clients; at; at = at->next)
 			if (c->idx < at->idx) {
-				c->next = at;
-				c->mon->clients = c;
+				last->next = at;
+				m->clients = c;
 				return;
 			} else if (at->idx <= c->idx && (!at->next || c->idx <= at->next->idx)) {
-				c->next = at->next;
+				last->next = at->next;
 				at->next = c;
 				return;
 			}
 	}
 
 	if (attachmode == AttachAbove) {
-		if (!(c->mon->sel == NULL || c->mon->sel == c->mon->clients || ISFLOATING(c->mon->sel))) {
-			for (at = c->mon->clients; at->next != c->mon->sel; at = at->next);
-			c->next = at->next;
+		if (!(m->sel == NULL || m->sel == m->clients || ISFLOATING(m->sel))) {
+			for (at = m->clients; at->next != m->sel; at = at->next);
+			last->next = at->next;
 			at->next = c;
 			return;
 		}
 	} else if (attachmode == AttachAside) {
-		for (at = c->mon->clients, n = 0; at; at = at->next)
-			if (!ISFLOATING(at) && ISVISIBLEONTAG(at, c->tags))
-				if (++n >= c->mon->nmaster)
+		for (at = m->clients, n = 0; at; at = at->next)
+			if (!ISFLOATING(at))
+				if (++n >= m->nmaster)
 					break;
 
-		if (at && c->mon->nmaster) {
-			c->next = at->next;
+		if (at && m->nmaster) {
+			last->next = at->next;
 			at->next = c;
 			return;
 		}
 	} else if (attachmode == AttachBelow) {
-		if (!(c->mon->sel == NULL || c->mon->sel == c || ISFLOATING(c->mon->sel))) {
-			c->next = c->mon->sel->next;
-			c->mon->sel->next = c;
+		if (!(m->sel == NULL || m->sel == c || ISFLOATING(m->sel))) {
+			last->next = m->sel->next;
+			m->sel->next = c;
 			return;
 		}
 	} else if (attachmode == AttachBottom) {
-		for (at = c->mon->clients; at && at->next; at = at->next);
+		for (at = m->clients; at && at->next; at = at->next);
 		if (at) {
 			at->next = c;
-			c->next = NULL;
+			last->next = NULL;
 			return;
 		}
 	}
-	attach(c); // master (default)
+
+	/* Attach master (default) */
+	last->next = m->clients;
+	m->clients = c;
 }

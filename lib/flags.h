@@ -106,6 +106,7 @@ static const unsigned long
 #define ENABLETAG(C) (C->flags & EnableTag)
 #define REVERTTAG(C) (C->flags & RevertTag)
 #define MOVERESIZE(C) (C->flags & MoveResize)
+#define MOVEPLACE(C) (C->flags & MovePlace)
 
 #define WASFLOATING(C) (C->prevflags & Floating)
 #define WASFAKEFULLSCREEN(C) (C->prevflags & FakeFullScreen)

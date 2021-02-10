@@ -148,3 +148,15 @@ updatecurrentdesktop(void)
 	long data[] = { i + NUMTAGS * selmon->num };
 	XChangeProperty(dpy, root, netatom[NetCurrentDesktop], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
 }
+
+void
+updateclientdesktop(Client *c)
+{
+	long rawdata[] = { selmon->tags };
+	int i = 0;
+	while (*rawdata >> (i + 1)) {
+		i++;
+	}
+	long data[] = { i + NUMTAGS * selmon->num };
+	XChangeProperty(dpy, c->win, netatom[NetWMDesktop], XA_CARDINAL, 32, PropModeReplace, (unsigned char *)data, 1);
+}
