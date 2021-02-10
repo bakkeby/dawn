@@ -1786,10 +1786,15 @@ keypress(XEvent *e)
 void
 killclient(const Arg *arg)
 {
-	Client *c = CLIENT;
-	if (!c || ISPERMANENT(c))
-		return;
-	if (!sendevent(c->win, wmatom[WMDelete], NoEventMask, wmatom[WMDelete], CurrentTime, 0, 0, 0)) {
+	Client *c = CLIENT, *next;
+
+	for (c = nextmarked(NULL, c); c; c = nextmarked(next, NULL)) {
+		next = c->next;
+		if (ISPERMANENT(c))
+			continue;
+		if (sendevent(c->win, wmatom[WMDelete], NoEventMask, wmatom[WMDelete], CurrentTime, 0, 0, 0))
+			continue;
+
 		XGrabServer(dpy);
 		XSetErrorHandler(xerrordummy);
 		XSetCloseDownMode(dpy, DestroyAll);
