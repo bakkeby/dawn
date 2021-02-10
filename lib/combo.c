@@ -4,24 +4,28 @@ void
 keyrelease(XEvent *e)
 {
 	combo = 0;
+	if (keepmarks)
+		unmarkall(NULL);
 }
 
 void
 combotag(const Arg *arg)
 {
-	Monitor *m = selmon;
-	if (!(m->sel && arg->ui & TAGMASK))
+	Client *c = selmon->sel;
+	int tags = arg->ui & TAGMASK;
+
+	if (!tags)
 		return;
 
-	if (m->sel->reverttags)
-		m->sel->reverttags = 0;
-	if (combo)
-		m->sel->tags |= arg->ui & TAGMASK;
-	else
-		m->sel->tags = arg->ui & TAGMASK;
-	focus(NULL);
-	arrange(m);
-	combo = 1;
+	if (combo) {
+		for (c = nextmarked(NULL, c); c; c = nextmarked(c->next, NULL))
+			c->tags |= tags;
+		arrange(selmon);
+	} else {
+		keepmarks = 1;
+		combo = 1;
+		tag(arg);
+	}
 }
 
 void

@@ -4,6 +4,7 @@
 #include "flags.h"
 #include "func.h"
 #include "warp.h"
+#include "mark.h"
 #include "combo.h"
 
 #include "bar_alpha.h"
@@ -41,7 +42,6 @@
 #include "ipc/ipc.h"
 #include "ipc/util.h"
 #include "killunsel.h"
-#include "mark.h"
 #include "nomodbuttons.h"
 #include "push.h"
 #include "restartsig.h"

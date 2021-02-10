@@ -3000,17 +3000,30 @@ tag(const Arg *arg)
 void
 tagclient(Client *c, const Arg *arg)
 {
-	if (!(c && arg->ui & TAGMASK))
+	Monitor *m = selmon;
+	int tags = arg->ui & TAGMASK;
+
+	if (!tags)
 		return;
 
-	c->tags = arg->ui & TAGMASK;
+	for (c = nextmarked(NULL, c); c; c = nextmarked(c->next, NULL)) {
+		if (c->mon != selmon) {
+			m = NULL;
+			unfocus(c, 1, NULL);
+			detach(c);
+			detachstack(c);
+			c->mon = selmon;
+			attachx(c);
+			attachstack(c);
+		}
 
-	if (c->reverttags)
+		c->tags = tags;
 		c->reverttags = 0;
+	}
 
 	focus(NULL);
-	arrange(c->mon);
-	if (enabled(ViewOnTag) && (arg->ui & TAGMASK) != c->mon->tags)
+	arrange(m);
+	if (enabled(ViewOnTag) && tags != m->tags)
 		view(arg);
 }
 
