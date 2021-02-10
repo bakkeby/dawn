@@ -3111,23 +3111,35 @@ void
 togglefloating(const Arg *arg)
 {
 	Client *c = CLIENT;
-	if (!c)
-		return;
-	if (ISFULLSCREEN(c) && !ISFAKEFULLSCREEN(c)) /* no support for fullscreen windows */
-		return;
-	setflag(c, Floating, !ISFLOATING(c) || ISFIXED(c));
-	if (ISFLOATING(c) && !MOVERESIZE(c)) {
-		if (c->sfx != -9999)
-			/* restore last known float dimensions */
-			resize(c, c->sfx, c->sfy, c->sfw, c->sfh, 0);
-		else {
-			setfloatpos(c, toggle_float_pos);
-			resizeclient(c, c->x, c->y, c->w, c->h);
+	Monitor *m = NULL;
+	XWindowChanges wc;
+	wc.stack_mode = Above;
+
+	for (c = nextmarked(NULL, c); c; c = nextmarked(c->next, NULL)) {
+		if (ISFULLSCREEN(c) && !ISFAKEFULLSCREEN(c)) /* no support for fullscreen windows */
+			continue;
+		if (m && c->mon != m) {
+			drawbar(m);
+			arrange(m);
 		}
+		setflag(c, Floating, !ISFLOATING(c) || ISFIXED(c));
+		if (ISFLOATING(c) && !MOVERESIZE(c)) {
+			if (c->sfx != -9999)
+				/* restore last known float dimensions */
+				resize(c, c->sfx, c->sfy, c->sfw, c->sfh, 0);
+			else {
+				setfloatpos(c, toggle_float_pos);
+				resizeclient(c, c->x, c->y, c->w, c->h);
+			}
+			wc.sibling = c->mon->bar->win;
+			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
+		}
+		setfloatinghint(c);
+		m = c->mon;
 	}
-	arrangemon(c->mon);
-	restack(c->mon);
-	setfloatinghint(c);
+	XSync(dpy, False);
+	drawbar(m);
+	arrange(m);
 }
 
 void
