@@ -4,15 +4,18 @@ changeopacity(const Arg *arg)
 	Client *c = selmon->sel;
 	if (!c)
 		return;
-	c->opacity += (c->opacity == 0 ? 1.0 + arg->f : arg->f);
 
-	if (c->opacity > 1.0)
-		c->opacity = 1.0;
+	for (c = nextmarked(NULL, c); c; c = nextmarked(c->next, NULL)) {
+		c->opacity += (c->opacity == 0 ? 1.0 + arg->f : arg->f);
 
-	if (c->opacity < 0)
-		c->opacity = 0;
+		if (c->opacity > 1.0)
+			c->opacity = 1.0;
 
-	opacity(c, c->opacity);
+		if (c->opacity < 0)
+			c->opacity = 0;
+
+		opacity(c, c->opacity);
+	}
 }
 
 void
