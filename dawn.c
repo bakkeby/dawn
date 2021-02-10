@@ -2514,33 +2514,32 @@ scan(void)
 void
 sendmon(Client *c, Monitor *m, unsigned int tags)
 {
-	if (c->mon == m)
-		return;
-	int hadfocus = (c == selmon->sel);
-	unfocus(c, 1, NULL);
-	detach(c);
-	detachstack(c);
-	if (c->tags & c->mon->tags)
-		arrange(c->mon);
-	else
-		drawbar(c->mon);
-	c->mon = m;
-	c->tags = tags;
-	c->reverttags = 0;
-	attachx(c);
-	attachstack(c);
+	Client *hadfocus = NULL, *next;
+	for (c = nextmarked(NULL, c); c; c = nextmarked(next, NULL)) {
+		next = c->next;
+		if (c->mon == m)
+			continue;
+
+		if (c == selmon->sel)
+			hadfocus = c;
+
+		unfocus(c, 1, NULL);
+		detach(c);
+		detachstack(c);
+
+		c->mon = m;
+		c->tags = tags;
+		c->reverttags = 0;
+		attachx(c);
+		attachstack(c);
+	}
 
 	if (m->tags & tags) {
-		arrange(m);
-
-		if (hadfocus) {
-			focus(c);
-			restack(m);
-		} else
-			focus(NULL);
+		focus(hadfocus);
+		arrange(NULL);
 	} else {
 		XMoveWindow(dpy, c->win, WIDTH(c) * -2, c->y);
-		drawbar(m);
+		drawbars();
 	}
 }
 
