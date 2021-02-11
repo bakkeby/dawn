@@ -2441,14 +2441,10 @@ resizeclientpad(Client *c, int x, int y, int w, int h, int tw, int th)
 	wc.border_width = c->bw;
 
 	if (enabled(CenterSizeHintsClients) && !ISFLOATING(c)) {
-		if (w != tw) {
-			wc.x += (tw - w) / 2;
-			c->w = tw;
-		}
-		if (h != th) {
-			wc.y += (th - h) / 2;
-			c->h = th;
-		}
+		if (w != tw)
+			c->x = wc.x += (tw - w) / 2;
+		if (h != th)
+			c->y = wc.y += (th - h) / 2;
 	}
 
 	if (!(c->tags & c->mon->tags) || MOVEPLACE(c)) {
