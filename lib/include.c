@@ -50,6 +50,7 @@
 #include "pertag.c"
 #include "push.c"
 #include "restartsig.c"
+#include "riodraw.c"
 #include "rotatestack.c"
 #include "savefloats.c"
 #include "scratchpad.c"

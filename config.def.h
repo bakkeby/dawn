@@ -26,6 +26,7 @@ static int floatposgrid_y                = 5;   /* float grid rows */
 static const int horizpadbar             = 2;   /* horizontal (inner) padding for statusbar (increases lrpad) */
 static const int vertpadbar              = 0;   /* vertical (inner) padding for statusbar (increases bh, overridden by bar_height) */
 
+static const char slopstyle[]            = "-t 0 -c 0.92,0.85,0.69,0.3"; /* do NOT define -f (format) here */
 static const char buttonbar[]            = "⛶";
 static const unsigned int systrayspacing = 2;   /* systray spacing */
 static char *toggle_float_pos            = "50% 50% 80% 80%"; // default floating position when triggering togglefloatpos
@@ -535,51 +536,54 @@ static Key keys[] = {
 	{ MODKEY,                       XK_Down,         focusdir,               {.i = 3 } }, // down
 
 	/* Unassigned key bidnings (available externally via the dawnc command) */
-//	{ MODKEY,                       XK_,             incrgaps,               {.i = +1 } },
-//	{ MODKEY,                       XK_,             incrgaps,               {.i = -1 } },
-//	{ MODKEY,                       XK_,             incrigaps,              {.i = +1 } },
-//	{ MODKEY,                       XK_,             incrigaps,              {.i = -1 } },
-//	{ MODKEY,                       XK_,             incrogaps,              {.i = +1 } },
-//	{ MODKEY,                       XK_,             incrogaps,              {.i = -1 } },
-//	{ MODKEY,                       XK_,             incrihgaps,             {.i = +1 } },
-//	{ MODKEY,                       XK_,             incrihgaps,             {.i = -1 } },
-//	{ MODKEY,                       XK_,             incrivgaps,             {.i = +1 } },
-//	{ MODKEY,                       XK_,             incrivgaps,             {.i = -1 } },
-//	{ MODKEY,                       XK_,             incrohgaps,             {.i = +1 } },
-//	{ MODKEY,                       XK_,             incrohgaps,             {.i = -1 } },
-//	{ MODKEY,                       XK_,             incrovgaps,             {.i = +1 } },
-//	{ MODKEY,                       XK_,             incrovgaps,             {.i = -1 } },
-//	{ MODKEY,                       XK_,             togglegaps,             {0} },
-//	{ MODKEY,                       XK_,             defaultgaps,            {0} },
-//	{ MODKEY,                       XK_,             cyclelayout,            {.i = -1 } },
-//	{ MODKEY,                       XK_,             cyclelayout,            {.i = +1 } },
-//	{ MODKEY,                       XK_,             shiftview,              { .i = -1 } },
-//	{ MODKEY,                       XK_,             shiftview,              { .i = +1 } },
-//	{ MODKEY,                       XK_,             focusmaster,           {0} },
-//	{ MODKEY,                       XK_,             tagallmon,              {.i = +1 } },
-//	{ MODKEY,                       XK_,             tagallmon,              {.i = -1 } },
-//	{ MODKEY,                       XK_,             tagswapmon,             {.i = +1 } },
-//	{ MODKEY,                       XK_,             tagswapmon,             {.i = -1 } },
-//	{ MODKEY,                       XK_,             transfer,               {0} },
-//	{ MODKEY,                       XK_,             transferall,            {0} },
-//	{ MODKEY,                       XK_,             togglesticky,           {0} },
-//	{ MODKEY,                       XK_,             focusurgent,            {0} },
-//	{ MODKEY,                       XK_,             inplacerotate,          {.i = +1} },
-//	{ MODKEY,                       XK_,             inplacerotate,          {.i = -1} },
-//	{ MODKEY,                       XK_,             rotatestack,            {.i = +1 } },
-//	{ MODKEY,                       XK_,             rotatestack,            {.i = -1 } },
-//	{ MODKEY,                       XK_,             unfloatvisible,         {0} },
-//	{ MODKEY,                       XK_,             switchcol,              {0} },
-//	{ MODKEY,                       XK_,             tagall,                 {.v = "F3"} },
-//	{ MODKEY,                       XK_,             tagall,                 {.v = "4"} },
-//	{ MODKEY,                       XK_,             setlayout,              {.v = &layouts[0]} },
-//	{ MODKEY,                       XK_,             xrdb,                   {0 } },
-//	{ MODKEY,                       XK_,             viewtoleft,             {0} },
-//	{ MODKEY,                       XK_,             viewtoright,            {0} },
-//	{ MODKEY,                       XK_,             tagtoleft,              {0} },
-//	{ MODKEY,                       XK_,             tagtoright,             {0} },
-//	{ MODKEY,                       XK_,             tagandviewtoleft,       {0} },
-//	{ MODKEY,                       XK_,             tagandviewtoright,      {0} },
+//	{ MODKEY,                       XK_,             incrgaps,               {.i = +1 } }, // increase all gaps (outer, inner, horizontal a
+//	{ MODKEY,                       XK_,             incrgaps,               {.i = -1 } }, // decrease all gaps (outer, inner, horizontal a
+//	{ MODKEY,                       XK_,             incrigaps,              {.i = +1 } }, // increase inner gaps (horizontal and vertical)
+//	{ MODKEY,                       XK_,             incrigaps,              {.i = -1 } }, // decrease inner gaps (horizontal and vertical)
+//	{ MODKEY,                       XK_,             incrogaps,              {.i = +1 } }, // increase outer gaps (horizontal and vertical)
+//	{ MODKEY,                       XK_,             incrogaps,              {.i = -1 } }, // decrease outer gaps (horizontal and vertical)
+//	{ MODKEY,                       XK_,             incrihgaps,             {.i = +1 } }, // increase inner horizontal gaps
+//	{ MODKEY,                       XK_,             incrihgaps,             {.i = -1 } }, // decrease inner horizontal gaps
+//	{ MODKEY,                       XK_,             incrivgaps,             {.i = +1 } }, // increase inner vertical gaps
+//	{ MODKEY,                       XK_,             incrivgaps,             {.i = -1 } }, // decrease inner vertical gaps
+//	{ MODKEY,                       XK_,             incrohgaps,             {.i = +1 } }, // increase outer horizontal gaps
+//	{ MODKEY,                       XK_,             incrohgaps,             {.i = -1 } }, // decrease outer horizontal gaps
+//	{ MODKEY,                       XK_,             incrovgaps,             {.i = +1 } }, // increase outer vertical gaps
+//	{ MODKEY,                       XK_,             incrovgaps,             {.i = -1 } }, // decrease outer vertical gaps
+//	{ MODKEY,                       XK_,             mark,                   {0} }, // marks the currently selected client
+//	{ MODKEY,                       XK_,             unmark,                 {0} }, // unmarks the currently selected client
+//	{ MODKEY,                       XK_,             togglegaps,             {0} }, // enables and disables the rendering of gaps in tiled layouts
+//	{ MODKEY,                       XK_,             defaultgaps,            {0} }, // revert gaps to the default settings
+//	{ MODKEY,                       XK_,             cyclelayout,            {.i = -1 } }, // cycle through the available layouts
+//	{ MODKEY,                       XK_,             cyclelayout,            {.i = +1 } }, // cycle through the available layouts (in reverse)
+//	{ MODKEY,                       XK_,             shiftview,              { .i = -1 } }, // shift the current view (i.e. selected tags) (counter-clockwise)
+//	{ MODKEY,                       XK_,             shiftview,              { .i = +1 } }, // shift the current view (i.e. selected tags) (clockwise)
+//	{ MODKEY,                       XK_,             focusmaster,           {0} }, // change focus to the first client in the stack (master)
+//	{ MODKEY,                       XK_,             tagallmon,              {.i = +1 } }, // move all clients on the current monitor to the monitor on the immediate right
+//	{ MODKEY,                       XK_,             tagallmon,              {.i = -1 } }, // move all clients on the current monitor to the monitor on the immediate left
+//	{ MODKEY,                       XK_,             tagswapmon,             {.i = +1 } }, // swap all clients on the current monitor with all clients on the monitor on the immediate right
+//	{ MODKEY,                       XK_,             tagswapmon,             {.i = -1 } }, // swap all clients on the current monitor with all clients on the monitor on the immediate left
+//	{ MODKEY,                       XK_,             transfer,               {0} }, // move a client between the master and stack area automatically adjusting nmaster
+//	{ MODKEY,                       XK_,             transferall,            {0} }, // swaps all clients in the stack area with all clients in the master area
+//	{ MODKEY,                       XK_,             togglesticky,           {0} }, // makes a client show on all workspaces)
+//	{ MODKEY,                       XK_,             focusurgent,            {0} }, // focus on the client marked as urgent
+//	{ MODKEY,                       XK_,             inplacerotate,          {.i = +1} }, // rotate clients within the respective area (master, primary stack, secondary stack) clockwise
+//	{ MODKEY,                       XK_,             inplacerotate,          {.i = -1} }, // rotate clients within the respective area (master, primary stack, secondary stack) counter-clockwise
+//	{ MODKEY,                       XK_,             rotatestack,            {.i = +1 } }, // rotate all clients (clockwise)
+//	{ MODKEY,                       XK_,             rotatestack,            {.i = -1 } }, // rotate all clients (counter-clockwise)
+//	{ MODKEY,                       XK_,             riodraw,                {0} }, // use slop to resize the currently selected client
+//	{ MODKEY,                       XK_,             unfloatvisible,         {0} }, // makes all floating clients on the currently selected workspace tiled
+//	{ MODKEY,                       XK_,             switchcol,              {0} }, // changes focus between the master and the primary stack area
+//	{ MODKEY,                       XK_,             tagall,                 {.v = "F3"} }, // move all floating clients on the currently viewed tag(s) to tag 3
+//	{ MODKEY,                       XK_,             tagall,                 {.v = "4"} }, // move all clients on the currently viewed tag(s) to tag 4
+//	{ MODKEY,                       XK_,             setlayout,              {.v = &layouts[0]} }, // sets a specific layout, see the layouts array for indices
+//	{ MODKEY,                       XK_,             xrdb,                   {0 } }, // reloads colors from XResources
+//	{ MODKEY,                       XK_,             viewtoleft,             {0} }, // view the tag on the immediate left of the current tag
+//	{ MODKEY,                       XK_,             viewtoright,            {0} }, // view the tag on the immediate right of the current tag
+//	{ MODKEY,                       XK_,             tagtoleft,              {0} }, // move the selected client to the tag on the immediate left of the current tag
+//	{ MODKEY,                       XK_,             tagtoright,             {0} }, // move the selected client to the tag on the immediate right of the current tag
+//	{ MODKEY,                       XK_,             tagandviewtoleft,       {0} }, // move the selected client to the tag on the immeditae left of the current tag and view that tag
+//	{ MODKEY,                       XK_,             tagandviewtoright,      {0} }, // move the selected client to the tag on the immeditae right of the current tag and view that tag
 //  // taggrid - change tags by direction, e.g. left, right, up, down
 //	{ MODKEY,                       XK_,             taggridmovetag,         { .ui = TAGGRID_UP    | TAGGRID_VIEW } },
 //	{ MODKEY,                       XK_,             taggridmovetag,         { .ui = TAGGRID_DOWN  | TAGGRID_VIEW } },
@@ -687,6 +691,8 @@ static IPCCommand ipccommands[] = {
 	IPCCOMMAND( pushdown, 1, {ARG_TYPE_NONE} ),
 	IPCCOMMAND( pushup, 1, {ARG_TYPE_NONE} ),
 	IPCCOMMAND( quit, 1, {ARG_TYPE_SINT} ), // 0 = quit, 1 = restart
+	IPCCOMMAND( removescratch, 1, {ARG_TYPE_SINT} ),
+	IPCCOMMAND( riodraw, 1, {ARG_TYPE_NONE} ),
 	IPCCOMMAND( setborderpx, 1, {ARG_TYPE_SINT} ),
 	IPCCOMMAND( seticonset, 1, {ARG_TYPE_SINT} ),
 	IPCCOMMAND( setlayoutaxisex, 1, {ARG_TYPE_SINT} ),
@@ -695,6 +701,7 @@ static IPCCommand ipccommands[] = {
 	IPCCOMMAND( setcfact, 1, {ARG_TYPE_FLOAT} ),
 	IPCCOMMAND( setmfact, 1, {ARG_TYPE_FLOAT} ),
 	IPCCOMMAND( setgapsex, 1, {ARG_TYPE_SINT} ),
+	IPCCOMMAND( setscratch, 1, {ARG_TYPE_SINT} ),
 	IPCCOMMAND( setstatus, 1, {ARG_TYPE_STR} ),
 	IPCCOMMAND( shiftview, 1, {ARG_TYPE_SINT} ),
 	IPCCOMMAND( shiftviewclients, 1, {ARG_TYPE_SINT} ),

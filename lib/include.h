@@ -45,6 +45,7 @@
 #include "nomodbuttons.h"
 #include "push.h"
 #include "restartsig.h"
+#include "riodraw.h"
 #include "rotatestack.h"
 #include "savefloats.h"
 #include "scratchpad.h"
