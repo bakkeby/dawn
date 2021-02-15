@@ -1905,7 +1905,7 @@ manage(Window w, XWindowAttributes *wa)
 	updatemotifhints(c);
 
 	if (ISCENTERED(c)) {
-		if (ISTRANSIENT(c)) {
+		if (ISTRANSIENT(c) && t) {
 			/* Transient windows are centered within the geometry of the parent window */
 			c->x = t->x + WIDTH(t) / 2 - WIDTH(c) / 2;
 			c->y = t->y + HEIGHT(t) / 2 - HEIGHT(c) / 2;
