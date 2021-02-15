@@ -481,6 +481,7 @@ static void seturgent(Client *c, int urg);
 static void showhide(Client *c);
 static void sigchld(int unused);
 static void spawn(const Arg *arg);
+static pid_t spawncmd(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagclient(Client *c, const Arg *arg);
 static void tagfittomon(Client *c, Monitor *m, int *cx, int *cy, int *cw, int *ch);
@@ -1953,7 +1954,15 @@ manage(Window w, XWindowAttributes *wa)
 
 	setclientstate(c, NormalState);
 
-	if ((SWITCHTAG(c) || ENABLETAG(c)) && !c->swallowing && c->tags && !(c->tags & m->tags)) {
+	if (!c->swallowing && riopid && (RIODRAWNOMATCHPID(c) || isdescprocess(riopid, c->pid))) {
+		if (riodimensions[3] != -1)
+			rioposition(c, riodimensions[0], riodimensions[1], riodimensions[2], riodimensions[3]);
+		else {
+			unmarkall(NULL);
+			killclient(&((Arg) { .v = c }));
+			return;
+		}
+	} else if ((SWITCHTAG(c) || ENABLETAG(c)) && !c->swallowing && c->tags && !(c->tags & m->tags)) {
 		selmon = m;
 		if (REVERTTAG(c))
 			c->reverttags = m->tags;
@@ -3093,7 +3102,14 @@ sigchld(int unused)
 void
 spawn(const Arg *arg)
 {
-	if (fork() == 0) {
+	spawncmd(arg);
+}
+
+pid_t
+spawncmd(const Arg *arg)
+{
+	pid_t pid;
+	if ((pid = fork()) == 0) {
 		if (dpy)
 			close(ConnectionNumber(dpy));
 		if (enabled(SpawnCwd) && selmon->sel) {
@@ -3134,6 +3150,7 @@ spawn(const Arg *arg)
 		perror(" failed");
 		exit(EXIT_SUCCESS);
 	}
+	return pid;
 }
 
 void

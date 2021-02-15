@@ -43,8 +43,8 @@ static const unsigned long
 	Swallow = 0x2000000, // enables swallowing of clients
 	SwallowFloating = 0x4000000, // means swallow floating windows by default
 	AutoHideScratchpads = 0x8000000, // automatically hide open scratchpads when moving to another workspace
-	FuncPlaceholder0x10000000 = 0x10000000,
-	FuncPlaceholder0x20000000 = 0x20000000,
+	RioDrawIncludeBorders = 0x10000000, // indicates whether the area drawn using slop includes the window borders
+	RioDrawSpawnAsync = 0x20000000, // indicates whether to spawn the application alongside or after drawing area using slop
 	FuncPlaceholder0x40000000 = 0x40000000,
 	FuncPlaceholder0x80000000 = 0x80000000,
 	FuncPlaceholder4294967296 = 0x100000000,

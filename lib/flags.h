@@ -40,7 +40,7 @@ static const unsigned long
 	FlagPlaceholder0x400000000 = 0x400000000,
 	FlagPlaceholder0x800000000 = 0x800000000,
 	RespectSizeHints = 0x1000000000, // respect size hints for this client when ResizeHints is globally disabled
-	FlagPlaceholder137438953472 = 0x2000000000,
+	RioDrawNoMatchPID = 0x2000000000, // do not match PID for this client when spawning via riospawn
 	FlagPlaceholder274877906944 = 0x4000000000,
 	FlagPlaceholder549755813888 = 0x8000000000,
 	FlagPlaceholder1099511627776 = 0x10000000000,
@@ -101,6 +101,8 @@ static const unsigned long
 #define ONLYMODBUTTONS(C) (C->flags & OnlyModButtons)
 #define RESPECTSIZEHINTS(C) (C->flags & RespectSizeHints)
 #define RESTOREFAKEFULLSCREEN(C) (C->flags & RestoreFakeFullScreen)
+#define RIODRAWNOMATCHPID(C) (C->flags & RioDrawNoMatchPID)
+
 #define RULED(C) (C->flags & Ruled)
 #define SWITCHTAG(C) (C->flags & SwitchTag)
 #define ENABLETAG(C) (C->flags & EnableTag)
