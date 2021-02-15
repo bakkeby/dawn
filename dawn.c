@@ -1002,6 +1002,9 @@ clientmessage(XEvent *e)
 		maximize_horz = (cme->data.l[1] == netatom[NetWMMaximizedHorz] || cme->data.l[2] == netatom[NetWMMaximizedHorz]);
 		if (maximize_vert || maximize_horz)
 			togglemaximize(c, maximize_vert, maximize_horz);
+	} else if (cme->message_type == netatom[NetCloseWindow]) {
+		unmarkall(NULL);
+		killclient(&((Arg) { .v = c }));
 	} else if (cme->message_type == netatom[NetWMDesktop]) {
 		for (m = mons; m && m->num != (cme->data.l[0] / NUMTAGS); m = m->next);
 		if (m != c->mon)
