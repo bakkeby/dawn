@@ -2065,9 +2065,9 @@ motionnotify(XEvent *e)
 }
 
 void
-moveorplace(const Arg *arg) {
-	Client *c = CLIENT;
-    if (!c->mon->layout || ISFLOATING(c))
+moveorplace(const Arg *arg)
+{
+    if (!selmon->layout || ISFLOATING(selmon->sel))
         movemouse(arg);
     else
         placemouse(arg);
