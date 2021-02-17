@@ -1,10 +1,7 @@
-static int num_marked = 0;
-static int keepmarks = 0;
-
 Client *
 nextmarked(Client *prev, Client *def)
 {
-	if (!num_marked)
+	if (!num_marked || ignore_marked)
 		return def;
 
 	Client *c = NULL;

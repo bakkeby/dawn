@@ -1004,7 +1004,6 @@ clientmessage(XEvent *e)
 		if (maximize_vert || maximize_horz)
 			togglemaximize(c, maximize_vert, maximize_horz);
 	} else if (cme->message_type == netatom[NetCloseWindow]) {
-		unmarkall(NULL);
 		killclient(&((Arg) { .v = c }));
 	} else if (cme->message_type == netatom[NetWMDesktop]) {
 		for (m = mons; m && m->num != (cme->data.l[0] / NUMTAGS); m = m->next);
@@ -1765,7 +1764,6 @@ incnstack(const Arg *arg)
 		arrangemon(selmon);
 }
 
-
 #ifdef XINERAMA
 static int
 isuniquegeom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info)
@@ -1788,12 +1786,14 @@ keypress(XEvent *e)
 
 	ev = &e->xkey;
 	keysym = XGetKeyboardMapping(dpy, (KeyCode)ev->keycode, 1, &keysyms_return);
+	ignore_marked = 0;
 	for (i = 0; i < LENGTH(keys); i++)
 		if (*keysym == keys[i].keysym
 				&& CLEANMASK(keys[i].mod) == CLEANMASK(ev->state)
 				&& keys[i].func)
 			keys[i].func(&(keys[i].arg));
 	XFree(keysym);
+	ignore_marked = 1;
 }
 
 void
@@ -1965,7 +1965,6 @@ manage(Window w, XWindowAttributes *wa)
 		if (riodimensions[3] != -1)
 			rioposition(c, riodimensions[0], riodimensions[1], riodimensions[2], riodimensions[3]);
 		else {
-			unmarkall(NULL);
 			killclient(&((Arg) { .v = c }));
 			return;
 		}
@@ -3484,6 +3483,9 @@ unmanage(Client *c, int destroyed)
 
 	if ((s = swallowingclient(c->win)))
 		s->swallowing = NULL;
+
+	if (ISMARKED(c))
+		unmarkclient(c);
 
 	detach(c);
 	detachstack(c);
