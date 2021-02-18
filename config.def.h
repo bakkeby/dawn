@@ -68,8 +68,8 @@ static unsigned long functionality = 0
 //	|Xresources // xrdb patch
 //	|AutoSaveFloats // auto save float posistion when using movemouse or resizemouse
 //	|CenterSizeHintsClients // center tiled clients subject to size hints within their tiled area
-//	|ResizeHints  // if enabled then dusk will respect size hints in tiled resizals
-//	|AutoHideScratchpads // automatically hide open scratchpads when moving to another workspace
+//	|ResizeHints // if enabled then dusk will respect size hints in tiled resizals
+//	|AutoHideScratchpads // automatically hide open scratchpads when moving to another tag
 //	|Debug // enables additional debug output
 //	|Desktop // tags change in unison giving the appearance of the workspace spanning all monitors like traditionl desktop environments
 //	|RioDrawIncludeBorders // indicates whether the area drawn using slop includes the window borders
@@ -406,6 +406,7 @@ static const Layout layouts[] = {
 	{ ":::",      flextile,         { -1, -1, NO_SPLIT, GAPPLESSGRID, GAPPLESSGRID, 0, NULL } }, // gappless grid
 	{ "[\\]",     flextile,         { -1, -1, NO_SPLIT, DWINDLE, DWINDLE, 0, NULL } }, // fibonacci dwindle
 	{ "(@)",      flextile,         { -1, -1, NO_SPLIT, SPIRAL, SPIRAL, 0, NULL } }, // fibonacci spiral
+	{ "[T]",      flextile,         { -1, -1, SPLIT_VERTICAL, LEFT_TO_RIGHT, TATAMI, 0, NULL } }, // tatami mats
  	{ "><>",      NULL,             {0} },    /* no layout function means floating behavior */
 	{ NULL,       NULL,             {0} },    /* end of layouts marker for cyclelayouts */
 };
@@ -499,9 +500,9 @@ static Key keys[] = {
 	{ MODKEY|Shift,                 XK_q,            quit,                   {1} }, // restart
 	{ MODKEY|Ctrl|Alt,              XK_q,            quit,                   {0} }, // exit dusk
 
-	{ MODKEY,                       XK_a,            markall,                {0} }, // marks all clients on the selected workspace
-	{ MODKEY|Ctrl,                  XK_a,            markall,                {1} }, // marks all floating clients on the selected workspace
-	{ MODKEY|Alt,                   XK_a,            markall,                {2} }, // marks all hidden clients on the selected workspace
+	{ MODKEY,                       XK_a,            markall,                {0} }, // marks all clients on the selected tag
+	{ MODKEY|Ctrl,                  XK_a,            markall,                {1} }, // marks all floating clients on the selected tag
+	{ MODKEY|Alt,                   XK_a,            markall,                {2} }, // marks all hidden clients on the selected tag
 	{ MODKEY|Shift,                 XK_a,            unmarkall,              {0} }, // unmarks all clients
 	{ MODKEY,                       XK_m,            togglemark,             {0} }, // marks or unmarks the selected client for group action
 	{ MODKEY|Alt,                   XK_m,            zoom,                   {0} }, // moves the currently focused window to/from the master area (for tiled layouts)
@@ -569,14 +570,14 @@ static Key keys[] = {
 //	{ MODKEY,                       XK_,             tagswapmon,             {.i = -1 } }, // swap all clients on the current monitor with all clients on the monitor on the immediate left
 //	{ MODKEY,                       XK_,             transfer,               {0} }, // move a client between the master and stack area automatically adjusting nmaster
 //	{ MODKEY,                       XK_,             transferall,            {0} }, // swaps all clients in the stack area with all clients in the master area
-//	{ MODKEY,                       XK_,             togglesticky,           {0} }, // makes a client show on all workspaces)
+//	{ MODKEY,                       XK_,             togglesticky,           {0} }, // makes a client show on all tags)
 //	{ MODKEY,                       XK_,             focusurgent,            {0} }, // focus on the client marked as urgent
 //	{ MODKEY,                       XK_,             inplacerotate,          {.i = +1} }, // rotate clients within the respective area (master, primary stack, secondary stack) clockwise
 //	{ MODKEY,                       XK_,             inplacerotate,          {.i = -1} }, // rotate clients within the respective area (master, primary stack, secondary stack) counter-clockwise
 //	{ MODKEY,                       XK_,             rotatestack,            {.i = +1 } }, // rotate all clients (clockwise)
 //	{ MODKEY,                       XK_,             rotatestack,            {.i = -1 } }, // rotate all clients (counter-clockwise)
 //	{ MODKEY,                       XK_,             rioresize,                {0} }, // use slop to resize the currently selected client
-//	{ MODKEY,                       XK_,             unfloatvisible,         {0} }, // makes all floating clients on the currently selected workspace tiled
+//	{ MODKEY,                       XK_,             unfloatvisible,         {0} }, // makes all floating clients on the currently selected tag(s) tiled
 //	{ MODKEY,                       XK_,             switchcol,              {0} }, // changes focus between the master and the primary stack area
 //	{ MODKEY,                       XK_,             tagall,                 {.v = "F3"} }, // move all floating clients on the currently viewed tag(s) to tag 3
 //	{ MODKEY,                       XK_,             tagall,                 {.v = "4"} }, // move all clients on the currently viewed tag(s) to tag 4
