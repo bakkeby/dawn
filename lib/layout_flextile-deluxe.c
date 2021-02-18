@@ -617,7 +617,6 @@ arrange_spiral(Monitor *m, int x, int y, int h, int w, int ih, int iv, int n, in
 	arrange_fibonacci(m, x, y, h, w, ih, iv, n, an, ai, 0);
 }
 
-
 static void
 arrange_tatami(Monitor *m, int x, int y, int h, int w, int ih, int iv, int n, int an, int ai)
 {
