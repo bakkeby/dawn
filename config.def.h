@@ -668,8 +668,8 @@ static IPCCommand ipccommands[] = {
 	IPCCOMMAND( cycleiconset, 1, {ARG_TYPE_SINT} ),
 	IPCCOMMAND( cyclelayout, 1, {ARG_TYPE_SINT} ),
 	IPCCOMMAND( defaultgaps, 1, {ARG_TYPE_NONE} ),
-	IPCCOMMAND( enable, 1, {ARG_TYPE_UINT} ),
-	IPCCOMMAND( disable, 1, {ARG_TYPE_UINT} ),
+	IPCCOMMAND( enable, 1, {ARG_TYPE_STR} ),
+	IPCCOMMAND( disable, 1, {ARG_TYPE_STR} ),
 	IPCCOMMAND( floatpos, 1, {ARG_TYPE_STR} ),
 	IPCCOMMAND( focusmaster, 1, {ARG_TYPE_NONE} ),
 	IPCCOMMAND( focusmon, 1, {ARG_TYPE_SINT} ),
@@ -725,9 +725,10 @@ static IPCCommand ipccommands[] = {
 	IPCCOMMAND( tagtoright, 1, {ARG_TYPE_NONE} ),
 	IPCCOMMAND( tagandviewtoleft, 1, {ARG_TYPE_NONE} ),
 	IPCCOMMAND( tagandviewtoright, 1, {ARG_TYPE_NONE} ),
-	IPCCOMMAND( toggle, 1, {ARG_TYPE_UINT} ), // toggle functionality on and off
+	IPCCOMMAND( toggle, 1, {ARG_TYPE_STR} ), // toggle functionality on and off
 	IPCCOMMAND( togglebar, 1, {ARG_TYPE_NONE} ),
 	IPCCOMMAND( togglefakefullscreen, 1, {ARG_TYPE_NONE} ),
+	IPCCOMMAND( toggleflagex, 1, {ARG_TYPE_STR} ),
 	IPCCOMMAND( togglefloating, 1, {ARG_TYPE_NONE} ),
 	IPCCOMMAND( togglefullscreen, 1, {ARG_TYPE_NONE} ),
 	IPCCOMMAND( togglegaps, 1, {ARG_TYPE_NONE} ),
