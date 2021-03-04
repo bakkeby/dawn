@@ -8,6 +8,7 @@ floatpos(const Arg *arg)
 
 	setfloatpos(c, (char *)arg->v);
 	resizeclient(c, c->x, c->y, c->w, c->h);
+	savefloats(c);
 
 	XRaiseWindow(dpy, c->win);
 	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w/2, c->h/2);
@@ -23,8 +24,12 @@ setfloatpos(Client *c, const char *floatpos)
 
 	if (!c || !floatpos)
 		return;
-	if (selmon->layout->arrange && !ISFLOATING(c))
-		return;
+
+	if (c->mon->layout->arrange && !ISFLOATING(c)) {
+		addflag(c, MoveResize);
+		togglefloating(&((Arg) { .v = c }));
+		removeflag(c, MoveResize);
+	}
 
 	switch(sscanf(floatpos, "%d%c %d%c %d%c %d%c", &x, &xCh, &y, &yCh, &w, &wCh, &h, &hCh)) {
 		case 4:
