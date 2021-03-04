@@ -741,6 +741,8 @@ arrangemon(Monitor *m)
 	strncpy(m->ltsymbol, m->layout->symbol, sizeof m->ltsymbol);
 	if (m->layout->arrange)
 		m->layout->arrange(m);
+	else
+		restoremonfloats(m);
 	drawbar(m);
 }
 

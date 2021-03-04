@@ -23,3 +23,13 @@ restorefloats(Client *c)
 	XMoveResizeWindow(dpy, c->win, x, y, w, h);
 	resize(c, x, y, w, h, 0);
 }
+
+void
+restoremonfloats(Monitor *m)
+{
+	Client *c;
+	/* restore last known float dimensions for all visible clients */
+	for (c = m->clients; c; c = c->next)
+		if (ISVISIBLE(c) && !HIDDEN(c))
+			restorefloats(c);
+}

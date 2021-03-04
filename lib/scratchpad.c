@@ -4,7 +4,9 @@ removescratch(const Arg *arg)
 	Client *c = selmon->sel;
 	if (!c)
 		return;
-	c->scratchkey = 0;
+
+	for (c = nextmarked(NULL, c); c; c = nextmarked(c->next, NULL))
+		c->scratchkey = 0;
 }
 
 void
@@ -14,7 +16,8 @@ setscratch(const Arg *arg)
 	if (!c)
 		return;
 
-	c->scratchkey = ((char**)arg->v)[0][0];
+	for (c = nextmarked(NULL, c); c; c = nextmarked(c->next, NULL))
+		c->scratchkey = ((char**)arg->v)[0][0];
 }
 
 void
@@ -67,6 +70,8 @@ togglescratch(const Arg *arg)
 			   this we detach them and add them to a temporary list (monclients) which is to be
 			   processed later. */
 			if (!multimonscratch && c->mon != selmon) {
+				if (ISFLOATING(c))
+					savefloats(c);
 				detach(c);
 				detachstack(c);
 				/* Note that we are adding clients at the end of the list, this is to preserve the
