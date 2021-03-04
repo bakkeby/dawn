@@ -29,7 +29,6 @@ dump_settings(yajl_gen gen)
       YSTR("ResizeHints"); YBOOL(enabled(ResizeHints));
       YSTR("SortScreens"); YBOOL(enabled(SortScreens));
       YSTR("Xresources"); YBOOL(enabled(Xresources));
-      YSTR("AutoSaveFloats"); YBOOL(enabled(AutoSaveFloats));
       YSTR("Debug"); YBOOL(enabled(Debug));
       YSTR("TagIntoStack"); YBOOL(enabled(TagIntoStack));
       YSTR("PerTagBar"); YBOOL(enabled(PerTagBar));

@@ -37,7 +37,7 @@ static const unsigned long
 	SortScreens = 0x80000, // only applies on startup
 	ViewOnTag = 0x100000, // follow a window to the tag it is being moved to
 	Xresources = 0x200000, // xrdb patch
-	AutoSaveFloats = 0x400000, // auto save float posistion when using movemouse or resizemouse
+	FuncPlaceholder0x400000 = 0x400000,
 	Debug = 0x800000,
 	Desktop = 0x1000000, // tags change in unison giving the appearance of tags spanning all monitors like traditionl desktop environments
 	Swallow = 0x2000000, // enables swallowing of clients

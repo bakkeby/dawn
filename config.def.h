@@ -66,7 +66,6 @@ static unsigned long functionality = 0
 //	|SortScreens // only applies on startup
 //	|ViewOnTag // follow a window to the tag it is being moved to
 //	|Xresources // xrdb patch
-//	|AutoSaveFloats // auto save float posistion when using movemouse or resizemouse
 //	|CenterSizeHintsClients // center tiled clients subject to size hints within their tiled area
 //	|ResizeHints // if enabled then dusk will respect size hints in tiled resizals
 //	|AutoHideScratchpads // automatically hide open scratchpads when moving to another tag
@@ -540,7 +539,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_Up,           focusdir,               {.i = 2 } }, // up
 	{ MODKEY,                       XK_Down,         focusdir,               {.i = 3 } }, // down
 
-	/* Unassigned key bidnings (available externally via the dawnc command) */
+	/* Unassigned key bindings (available externally via the dawnc command) */
 //	{ MODKEY,                       XK_,             incrgaps,               {.i = +1 } }, // increase all gaps (outer, inner, horizontal a
 //	{ MODKEY,                       XK_,             incrgaps,               {.i = -1 } }, // decrease all gaps (outer, inner, horizontal a
 //	{ MODKEY,                       XK_,             incrigaps,              {.i = +1 } }, // increase inner gaps (horizontal and vertical)
@@ -640,9 +639,10 @@ static Button buttons[] = {
 	{ ClkClientWin,              MODKEY|Shift,            Button8,        markmouse,        {0} }, // unmarks clients under the mouse cursor for group action
 	{ ClkClientWin,              MODKEY,                  Button9,        markmouse,        {2} }, // toggles marking of clients under the mouse cursor for group action
 	{ ClkClientWin,              MODKEY,                  Button1,        moveorplace,      {1} }, // moves a client window into a floating or tiled position depending on floating state
-	{ ClkClientWin,              MODKEY|Ctrl,             Button1,        placemouse,       {1} }, // moves a client window between tiled positions (0 = relative to mouse cursor, 1 = relative to window center, 2 = mouse cursor warps to window center)
+	{ ClkClientWin,              MODKEY|Ctrl,             Button1,        movemouse,        {0} }, // moves a client window between tiled positions (0 = relative to mouse cursor, 1 = relative to window center, 2 = mouse cursor warps to window center)
 	{ ClkClientWin,              MODKEY|Alt,              Button2,        togglefloating,   {0} }, // toggles between tiled and floating arrangement for given client
-	{ ClkClientWin,              MODKEY,                  Button3,        resizemouse,      {0} }, // change the size of a floating client window
+	{ ClkClientWin,              MODKEY,                  Button3,        resizeorcfacts,   {0} }, // change the size of a floating client window
+	{ ClkClientWin,              MODKEY|Ctrl,             Button3,        resizemouse,      {0} }, // change the size of a floating client window
 	{ ClkClientWin,              0,                       Button8,        movemouse,        {0} }, // move a client window using extra mouse buttons (previous)
 	{ ClkClientWin,              0,                       Button9,        resizemouse,      {0} }, // resize a client window using extra mouse buttons (next)
 	{ ClkClientWin,              MODKEY,                  Button2,        zoom,             {0} }, // moves the currently focused window to/from the master area (for tiled layouts)

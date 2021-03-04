@@ -114,8 +114,6 @@ getfuncbyname(const char *name)
 		return ViewOnTag;
 	else if (strcmp(name, "Xresources") == 0)
 		return Xresources;
-	else if (strcmp(name, "AutoSaveFloats") == 0)
-		return AutoSaveFloats;
 	else if (strcmp(name, "Debug") == 0)
 		return Debug;
 	else if (strcmp(name, "Desktop") == 0)

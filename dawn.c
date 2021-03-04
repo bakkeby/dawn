@@ -467,6 +467,7 @@ static void resize(Client *c, int x, int y, int w, int h, int interact);
 static void resizeclient(Client *c, int x, int y, int w, int h);
 static void resizeclientpad(Client *c, int x, int y, int w, int h, int xpad, int ypad);
 static void resizemouse(const Arg *arg);
+static void resizeorcfacts(const Arg *arg);
 static void restack(Monitor *m);
 static void run(void);
 static void scan(void);
@@ -1840,6 +1841,10 @@ manage(Window w, XWindowAttributes *wa)
 	c->oldbw = wa->border_width;
 	c->cfact = 1.0;
 	c->mon = NULL;
+	c->sfx = -9999;
+	c->sfy = -9999;
+	c->sfw = c->w;
+	c->sfh = c->h;
 
 	updatetitle(c);
 	getclientflags(c);
@@ -1856,8 +1861,11 @@ manage(Window w, XWindowAttributes *wa)
 			c->mon = selmon;
 		}
 	}
+
 	if (!c->tags && !c->scratchkey)
 		c->tags = (c->mon->tags);
+
+	restorewindowfloatposition(c, c->mon);
 
 	if (!RULED(c)) {
 		if (c->x == c->mon->wx && c->y == c->mon->wy)
@@ -1947,11 +1955,6 @@ manage(Window w, XWindowAttributes *wa)
 			c->y = m->wy + (m->wh - HEIGHT(c)) / 2;
 		}
 	}
-
-	c->sfx = -9999;
-	c->sfy = -9999;
-	c->sfw = c->w;
-	c->sfh = c->h;
 
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
 		(unsigned char *) &(c->win), 1);
@@ -2131,8 +2134,7 @@ movemouse(const Arg *arg)
 				togglefloating(NULL);
 			if (!selmon->layout->arrange || ISFLOATING(c)) {
 				resize(c, nx, ny, c->w, c->h, 1);
-				if (enabled(AutoSaveFloats))
-					savefloats(NULL);
+				savefloats(c);
 			}
 			break;
 		}
@@ -2560,8 +2562,7 @@ resizemouse(const Arg *arg)
 			}
 			if (!selmon->layout->arrange || ISFLOATING(c)) {
 				resize(c, nx, ny, nw, nh, 1);
-				if (enabled(AutoSaveFloats))
-					savefloats(NULL);
+				savefloats(c);
 			}
 			break;
 		}
@@ -2577,6 +2578,15 @@ resizemouse(const Arg *arg)
 	removeflag(c, MoveResize);
 	if (moveresizeopacity)
 		opacity(c, prevopacity);
+}
+
+void
+resizeorcfacts(const Arg *arg)
+{
+	if (!selmon->layout || ISFLOATING(selmon->sel))
+		resizemouse(arg);
+	else
+		dragcfact(arg);
 }
 
 void
@@ -3067,8 +3077,7 @@ showhide(Client *c)
 	if (ISVISIBLE(c) && !HIDDEN(c)) {
 		/* show clients top down */
 		if (!c->mon->layout->arrange && c->sfx != -9999 && !ISFULLSCREEN(c)) {
-			XMoveWindow(dpy, c->win, c->sfx, c->sfy);
-			resize(c, c->sfx, c->sfy, c->sfw, c->sfh, 0);
+			restorefloats(c);
 			showhide(c->snext);
 			return;
 		}
@@ -3243,13 +3252,20 @@ tagmon(const Arg *arg)
 void
 tagmonresize(Client *c, Monitor *o, Monitor *n)
 {
+	if (!c || o == n)
+		return;
+
+	if (c->sfx == -9999)
+		savefloats(c);
+
+	savewindowfloatposition(c, o);
+	if (!restorewindowfloatposition(c, n))
+		tagrelposmon(c, o, n, &c->sfx, &c->sfy, &c->sfw, &c->sfh);
+
 	if (ISFLOATING(c) && (!ISFULLSCREEN(c) || ISFAKEFULLSCREEN(c)))
 		tagrelposmon(c, o, n, &c->x, &c->y, &c->w, &c->h);
 	else
 		tagrelposmon(c, o, n, &c->oldx, &c->oldy, &c->oldw, &c->oldh);
-
-	if (c->sfx != -9999)
-		tagrelposmon(c, o, n, &c->sfx, &c->sfy, &c->sfw, &c->sfh);
 }
 
 /* Works out a client's (c) position on a new monitor (n) relative to that of the position on
@@ -3313,12 +3329,9 @@ togglefloating(const Arg *arg)
 		}
 		setflag(c, Floating, !ISFLOATING(c) || ISFIXED(c));
 		if (ISFLOATING(c) && !MOVERESIZE(c)) {
-			if (c->sfx != -9999)
-				/* restore last known float dimensions */
-				resize(c, c->sfx, c->sfy, c->sfw, c->sfh, 0);
-			else {
+			if (c->sfx == -9999) {
 				setfloatpos(c, toggle_float_pos);
-				resizeclient(c, c->x, c->y, c->w, c->h);
+				addflag(c, NeedResize);
 			}
 			wc.sibling = c->mon->bar->win;
 			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
@@ -3326,9 +3339,11 @@ togglefloating(const Arg *arg)
 		setfloatinghint(c);
 		m = c->mon;
 	}
-	XSync(dpy, False);
-	drawbar(m);
-	arrange(m);
+	if (m) {
+		XSync(dpy, False);
+		drawbar(m);
+		arrange(m);
+	}
 }
 
 void
@@ -3343,7 +3358,7 @@ togglemaximize(Client *c, int maximize_vert, int maximize_horz)
 				if (!WASFLOATING(c))
 					togglefloating(&((Arg) { .v = c }));
 				else
-					resizeclient(c, c->sfx, c->sfy, c->sfw, c->sfh);
+					restorefloats(c);
 				return;
 			}
 		} else if (maximize_vert && abs(c->y - c->mon->wy) <= c->mon->gappoh) {
@@ -3353,7 +3368,7 @@ togglemaximize(Client *c, int maximize_vert, int maximize_horz)
 			resizeclient(c, c->sfx, c->y, c->sfw, c->h);
 			return;
 		}
-		savefloats(&((Arg) { .v = c }));
+		savefloats(c);
 	}
 
  	SETFLOATING(c);
