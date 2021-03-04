@@ -495,6 +495,8 @@ static Key keys[] = {
 	{ MODKEY,                       XK_Tab,          view,                   {0} },
 	{ MODKEY,                       XK_comma,        shiftviewclients,       { .i = -1 } },
 	{ MODKEY,                       XK_period,       shiftviewclients,       { .i = +1 } },
+	{ MODKEY|Shift,                 XK_Tab,          shiftviewclients,       { .i = -1 } },
+	{ MODKEY,                       XK_Tab,          shiftviewclients,       { .i = +1 } },
 	{ MODKEY,                       XK_z,            showhideclient,         {0} },
 	{ MODKEY,                       XK_q,            killclient,             {0} },
 	{ MODKEY|Shift,                 XK_q,            quit,                   {1} }, // restart
