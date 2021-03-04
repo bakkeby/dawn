@@ -13,4 +13,4 @@ static int iscenteredlayout(Monitor *m, int n);
 static int isfixedlayout(Monitor *m);
 static int ismirroredlayout(Monitor *m);
 
-static Client *flextitledrawarea(Monitor *m, Client *c, int x, int r, int w, int max_clients, int tabscheme, int draw_tiled, int draw_hidden, int draw_floating, int passx, void(*tabfn)(Monitor *, Client *, int, int, int, int, Arg *arg, BarArg *barg), Arg *arg, BarArg *barg);
+static Client *flextitledrawarea(Monitor *m, Client *c, int x, int w, int num_clients, int tabscheme, int draw_tiled, int draw_hidden, int draw_floating, int passx, void(*tabfn)(Monitor *, Client *, int, int, int, int, Arg *arg, BarArg *barg), Arg *arg, BarArg *barg);

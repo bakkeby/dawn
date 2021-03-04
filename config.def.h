@@ -77,10 +77,11 @@ static unsigned long functionality = 0
 
 static const char statussep              = ';'; /* separator between status bars */
 
-#define FLEXWINTITLE_MASTERWEIGHT 15   // master weight compared to hidden and floating window titles
-#define FLEXWINTITLE_STACKWEIGHT 4     // stack weight compared to hidden and floating window titles
-#define FLEXWINTITLE_HIDDENWEIGHT 0    // hidden window title weight
-#define FLEXWINTITLE_FLOATWEIGHT 0     // floating window title weight, set to 0 to not show floating windows
+static int flexwintitle_masterweight     = 15; // master weight compared to hidden and floating window titles
+static int flexwintitle_stackweight      = 4;  // stack weight compared to hidden and floating window titles
+static int flexwintitle_hiddenweight     = 0;  // hidden window title weight
+static int flexwintitle_floatweight      = 0;  // floating window title weight, set to 0 to not show floating windows
+static int flexwintitle_separator        = borderpx; // width of client separator
 
 static const char *fonts[]               = { "monospace:size=10" };
 static const char dmenufont[]            = "monospace:size=10";
@@ -217,8 +218,8 @@ static char *colors[][ColCount] = {
 	/*                       fg                bg                  border */
 	[SchemeNorm]         = { normfgcolor,      normbgcolor,        normbordercolor },
 	[SchemeSel]          = { selfgcolor,       selbgcolor,         selbordercolor },
-	[SchemeTitleNorm]    = { titlenormfgcolor, titlenormbgcolor,                  },
-	[SchemeTitleSel]     = { titleselfgcolor,  titleselbgcolor,                   },
+	[SchemeTitleNorm]    = { titlenormfgcolor, titlenormbgcolor,   selbordercolor },
+	[SchemeTitleSel]     = { titleselfgcolor,  titleselbgcolor,    selbordercolor },
 	[SchemeTagsNorm]     = { tagsnormfgcolor,  tagsnormbgcolor,                   },
 	[SchemeTagsSel]      = { tagsselfgcolor,   tagsselbgcolor,                    },
 	[SchemeHid]          = { hidfgcolor,       hidbgcolor,         hidbordercolor },
@@ -327,17 +328,17 @@ static const Rule clientrules[] = {
  *    name - does nothing, intended for visual clue and for logging / debugging
  */
 static const BarRule barrules[] = {
-	/* monitor  bar    alignment               widthfunc                 drawfunc                 clickfunc                 name */
-	{ -1,       0,     BAR_ALIGN_LEFT,         width_stbutton,           draw_stbutton,           click_stbutton,           "statusbutton" },
-	{ -1,       0,     BAR_ALIGN_LEFT,         width_tags,               draw_tags,               click_tags,               "tags" },
-	{ -1,       0,     BAR_ALIGN_LEFT,         width_taggrid,            draw_taggrid,            click_taggrid,            "taggrid" },
-	{ 'A',      0,     BAR_ALIGN_RIGHT,        width_systray,            draw_systray,            click_systray,            "systray" },
-	{ -1,       0,     BAR_ALIGN_LEFT,         width_ltsymbol,           draw_ltsymbol,           click_ltsymbol,           "layout" },
-	{ 'A',      0,     BAR_ALIGN_RIGHT,        width_status2d,           draw_status2d,           click_statuscmd,          "status2d" },
-	{ -1,       0,     BAR_ALIGN_NONE,         width_flexwintitle,       draw_flexwintitle,       click_flexwintitle,       "flexwintitle" },
-	{ 'A',      1,     BAR_ALIGN_CENTER,       width_status2d_es,        draw_status2d_es,        click_statuscmd_es,       "status2d_es" },
-	{ -1,       1,     BAR_ALIGN_RIGHT_RIGHT,  width_wintitle_hidden,    draw_wintitle_hidden,    click_wintitle_hidden,    "wintitle_hidden" },
-	{ -1,       1,     BAR_ALIGN_LEFT,         width_wintitle_floating,  draw_wintitle_floating,  click_wintitle_floating,  "wintitle_floating" },
+	/* monitor  bar    scheme   alignment               widthfunc                 drawfunc                 clickfunc                 name */
+	{ -1,       0,     0,       BAR_ALIGN_LEFT,         width_stbutton,           draw_stbutton,           click_stbutton,           "statusbutton" },
+	{ -1,       0,     0,       BAR_ALIGN_LEFT,         width_tags,               draw_tags,               click_tags,               "tags" },
+	{ -1,       0,     0,       BAR_ALIGN_LEFT,         width_taggrid,            draw_taggrid,            click_taggrid,            "taggrid" },
+	{ 'A',      0,     0,       BAR_ALIGN_RIGHT,        width_systray,            draw_systray,            click_systray,            "systray" },
+	{ -1,       0,     0,       BAR_ALIGN_LEFT,         width_ltsymbol,           draw_ltsymbol,           click_ltsymbol,           "layout" },
+	{ 'A',      0,     0,       BAR_ALIGN_RIGHT,        width_status2d,           draw_status2d,           click_statuscmd,          "status2d" },
+	{ -1,       0,     0,       BAR_ALIGN_NONE,         width_flexwintitle,       draw_flexwintitle,       click_flexwintitle,       "flexwintitle" },
+	{ 'A',      1,     0,       BAR_ALIGN_CENTER,       width_status2d_es,        draw_status2d_es,        click_statuscmd_es,       "status2d_es" },
+	{ -1,       1,     0,       BAR_ALIGN_RIGHT_RIGHT,  width_wintitle_hidden,    draw_wintitle_hidden,    click_wintitle_hidden,    "wintitle_hidden" },
+	{ -1,       1,     0,       BAR_ALIGN_LEFT,         width_wintitle_floating,  draw_wintitle_floating,  click_wintitle_floating,  "wintitle_floating" },
 };
 
 static const MonitorRule monrules[] = {
