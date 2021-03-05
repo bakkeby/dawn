@@ -46,6 +46,8 @@ riodraw(Client *c, const char slopstyle[])
 
 	if (c) {
 		rioposition(c, riodimensions[0], riodimensions[1], riodimensions[2], riodimensions[3]);
+		drawbar(c->mon);
+		arrange(c->mon);
 		return 0;
 	}
 
@@ -67,14 +69,20 @@ rioposition(Client *c, int x, int y, int w, int h)
 		focus(c);
 	}
 
-	SETFLOATING(c);
-	if (enabled(RioDrawIncludeBorders))
-		resizeclient(c, x, y, w - (c->bw * 2), h - (c->bw * 2));
-	else
-		resizeclient(c, x - c->bw, y - c->bw, w, h);
-	drawbar(m);
-	arrange(m);
+	if (enabled(RioDrawIncludeBorders)) {
+		c->x = x;
+		c->y = y;
+		c->w = w - (c->bw * 2);
+		c->h = h - (c->bw * 2);
+	} else {
+		c->x = x - c->bw;
+		c->y = y - c->bw;
+		c->w = w;
+		c->h = h;
+	}
 
+	SETFLOATING(c);
+	savefloats(c);
 	riodimensions[3] = -1;
 	riopid = 0;
 }

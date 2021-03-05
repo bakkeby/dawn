@@ -468,6 +468,8 @@ static Key keys[] = {
 	/* modifier                     key              function                argument */
 	{ MODKEY,                       XK_d,            spawn,                  {.v = dmenucmd } },
 	{ MODKEY,                       XK_Return,       spawn,                  {.v = termcmd } },
+	{ MODKEY,                       XK_x,            riospawn,               {.v = termcmd } }, // draw/spawn a terminal
+	{ MODKEY|Shift,                 XK_x,            rioresize,              {0} }, // use slop to resize the currently selected client
 	{ MODKEY|Shift,                 XK_Return,       riospawn,               {.v = termcmd } }, // draw/spawn a terminal
 	{ MODKEY,                       XK_b,            togglebar,              {0} },
 
