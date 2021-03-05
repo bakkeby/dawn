@@ -2096,9 +2096,9 @@ movemouse(const Arg *arg)
 		return;
 	if (ISFULLSCREEN(c) && !ISFAKEFULLSCREEN(c)) /* no support moving fullscreen windows by mouse */
 		return;
-	if (moveresizeopacity) {
+	if (moveopacity) {
 		prevopacity = c->opacity;
-		opacity(c, moveresizeopacity);
+		opacity(c, moveopacity);
 	}
 	restack(selmon);
 	ocx = c->x;
@@ -2153,7 +2153,7 @@ movemouse(const Arg *arg)
 	}
 	focus(NULL);
 	removeflag(c, MoveResize);
-	if (moveresizeopacity)
+	if (moveopacity)
 		opacity(c, prevopacity);
 }
 
@@ -2197,9 +2197,9 @@ placemouse(const Arg *arg)
 
 	addflag(c, MovePlace);
 	removeflag(c, Floating);
-	if (moveresizeopacity) {
+	if (placeopacity) {
 		prevopacity = c->opacity;
-		opacity(c, moveresizeopacity);
+		opacity(c, placeopacity);
 	}
 
 	XGetWindowAttributes(dpy, c->win, &wa);
@@ -2292,7 +2292,7 @@ placemouse(const Arg *arg)
 	if (nx != -9999)
 		resize(c, nx, ny, c->w, c->h, 0);
 	arrangemon(c->mon);
-	if (moveresizeopacity)
+	if (placeopacity)
 		opacity(c, prevopacity);
 }
 
@@ -2525,9 +2525,9 @@ resizemouse(const Arg *arg)
 		return;
 	if (ISFULLSCREEN(c) && !ISFAKEFULLSCREEN(c)) /* no support resizing fullscreen windows by mouse */
 		return;
-	if (moveresizeopacity) {
+	if (resizeopacity) {
 		prevopacity = c->opacity;
-		opacity(c, moveresizeopacity);
+		opacity(c, resizeopacity);
 	}
 	restack(selmon);
 	ocx = c->x;
@@ -2583,7 +2583,7 @@ resizemouse(const Arg *arg)
 		focus(NULL);
 	}
 	removeflag(c, MoveResize);
-	if (moveresizeopacity)
+	if (resizeopacity)
 		opacity(c, prevopacity);
 }
 
