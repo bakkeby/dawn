@@ -29,13 +29,17 @@ static const TileArranger flextiles[] = {
 	{ arrange_left_to_right },
 	{ arrange_monocle },
 	{ arrange_gapplessgrid },
+	{ arrange_gapplessgrid_cfacts },
 	{ arrange_gapplessgrid_alt1 },
 	{ arrange_gapplessgrid_alt2 },
 	{ arrange_gridmode },
 	{ arrange_horizgrid },
 	{ arrange_dwindle },
+	{ arrange_dwindle_cfacts },
 	{ arrange_spiral },
+	{ arrange_spiral_cfacts },
 	{ arrange_tatami },
+	{ arrange_tatami_cfacts },
 };
 
 static void
@@ -64,8 +68,8 @@ setlayoutaxisex(const Arg *arg)
 {
 	int axis, arr;
 
-	axis = arg->i & 0x3; // lower two bytes indicates layout, master or stack1-2
-	arr = ((arg->i & 0xFC) >> 2); // remaining six upper bytes indicate arrangement
+	axis = arg->i & 0x3; // lower two bits indicates layout, master or stack1-2
+	arr = arg->i >> 2;   // remaining upper bits indicate arrangement
 
 	if ((axis == 0 && abs(arr) > LAYOUT_LAST)
 			|| (axis > 0 && (arr > AXIS_LAST || arr < 0)))
@@ -495,6 +499,91 @@ arrange_gapplessgrid(Monitor *m, int x, int y, int h, int w, int ih, int iv, int
 	}
 }
 
+static void
+arrange_gapplessgrid_cfacts(Monitor *m, int x, int y, int h, int w, int ih, int iv, int n, int an, int ai)
+{
+	int i, cols, rows, ch, cw, cy, cn, rn, cc, crest, colw; // counters
+	float cfacts_total = 0;
+	Client *c;
+
+	/* grid dimensions */
+	for (cols = 1; cols <= an/2; cols++)
+		if (cols*cols >= an)
+			break;
+	if (an == 5) /* set layout against the general calculation: not 1:2:2, but 2:3 */
+		cols = 2;
+	rows = an/cols;
+
+	crest = colw = w - iv * (cols - 1);
+
+	float cfacts[cols];
+	int rrests[cols];
+	for (i = 0; i < cols; i++) {
+		cfacts[i] = 0;
+		rrests[i] = 0;
+	}
+
+	/* Sum cfacts for columns */
+	for (i = cn = rn = cc = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), ++i) {
+		if (i >= ai && i < (ai + an)) {
+			if (cc/rows + 1 > cols - an%cols)
+				rows = an/cols + 1;
+			cfacts[cn] += c->cfact;
+			cfacts_total += c->cfact;
+			rn++;
+			cc++;
+			if (rn >= rows) {
+				rn = 0;
+				cn++;
+			}
+		}
+	}
+
+	/* Work out cfact remainders */
+	for (i = cn = rn = cc = 0, rows = an/cols, c = nexttiled(m->clients); c; c = nexttiled(c->next), ++i) {
+		if (i >= ai && i < (ai + an)) {
+			if (cc/rows + 1 > cols - an%cols)
+				rows = an/cols + 1;
+			rrests[cn] += (h - ih * (rows - 1)) * (c->cfact / cfacts[cn]) + (rn == 0 ? 0 : ih);
+			rn++;
+			cc++;
+			if (rn >= rows) {
+				rn = 0;
+				cn++;
+			}
+		}
+	}
+
+	for (i = 0; i < cols; i++) {
+		crest -= (int)(colw * (cfacts[i] / cfacts_total));
+		rrests[i] = h - rrests[i];
+	}
+
+	for (i = cn = rn = cc = 0, cy = y, rows = an/cols, c = nexttiled(m->clients); c; c = nexttiled(c->next), ++i) {
+		if (i >= ai && i < (ai + an)) {
+			if (cc/rows + 1 > cols - an%cols)
+				rows = an/cols + 1;
+			cw = (int)(colw * (cfacts[cn] / cfacts_total)) + (cn < crest ? 1 : 0);
+			ch = (h - ih * (rows - 1)) * ((double)c->cfact / (double)cfacts[cn]) + (rn < rrests[cn] ? 1 : 0);
+			resize(c,
+				x,
+				cy,
+				cw - 2 * c->bw,
+				ch - 2 * c->bw,
+				0);
+			rn++;
+			cc++;
+			cy += ch + ih;
+			if (rn >= rows) {
+				rn = 0;
+				x += cw + ih;
+				cn++;
+				cy = y;
+			}
+		}
+	}
+}
+
 /* This version of gappless grid fills rows first */
 static void
 arrange_gapplessgrid_alt1(Monitor *m, int x, int y, int h, int w, int ih, int iv, int n, int an, int ai)
@@ -606,15 +695,118 @@ arrange_fibonacci(Monitor *m, int x, int y, int h, int w, int ih, int iv, int n,
 }
 
 static void
+arrange_fibonacci_cfacts(Monitor *m, int x, int y, int h, int w, int ih, int iv, int n, int an, int ai, int s)
+{
+	Client *clients[4] = { NULL, NULL, NULL, NULL };
+	int i, j, q, nx, ny, nw, nh, tnw, tnh;
+	Client *t, *a, *b, *c, *d;
+
+	nx = x;
+	ny = y;
+	nw = w;
+	nh = h;
+
+	for (i = 0, j = 0, q = 0, t = nexttiled(m->clients); t; t = nexttiled(t->next), j++) {
+		if (j >= ai && j < (ai + an)) {
+			clients[q] = t;
+			++q;
+
+			if (q < 4 && (j + 1 < ai + an) && j - ai < 7) // magic number 7 limits to 9 tiled clients
+				continue;
+
+			a = clients[0];
+			b = clients[1];
+			c = clients[2];
+			d = clients[3];
+
+			switch (q) {
+			case 1:
+				resize(a, nx, ny, nw - 2 * a->bw, nh - 2 * a->bw, False);
+				q = 0;
+				break;
+			case 2:
+				tnw = (nw - iv) * (a->cfact / (a->cfact + b->cfact));
+				resize(a, nx, ny, tnw - 2 * a->bw, nh - 2 * a->bw, False);
+				resize(b, nx + tnw + iv, ny, nw - iv - tnw - 2 * b->bw, nh - 2 * b->bw, False);
+				nx += tnw + iv;
+				q = 0;
+				break;
+			case 3:
+				tnw = (nw - iv) * (a->cfact / (a->cfact + b->cfact));
+				tnh = (nh - ih) * (b->cfact / (b->cfact + c->cfact));
+				if (!s && i % 2) {
+					resize(a, nx + nw - tnw, ny, tnw - 2 * a->bw, nh - 2 * a->bw, False);
+					resize(b, nx, ny + nh - tnh, nw - iv - tnw - 2 * b->bw, tnh - 2 * b->bw, False);
+					resize(c, nx, ny, nw - iv - tnw - 2 * c->bw, nh - ih - tnh - 2 * c->bw, False);
+
+				} else {
+					resize(a, nx, ny, tnw - 2 * a->bw, nh - 2 * a->bw, False);
+					resize(b, nx + tnw + iv, ny, nw - iv - tnw - 2 * b->bw, tnh - 2 * b->bw, False);
+					resize(c, nx + tnw + iv, ny + tnh + ih, nw - iv - tnw - 2 * c->bw, nh - ih - tnh - 2 * c->bw, False);
+					nx += tnw + iv;
+					ny += tnh + ih;
+				}
+				nw -= tnw + iv;
+				nh -= tnh + ih;
+				q = 0;
+				break;
+			case 4:
+				if (!s && i % 2) {
+					tnw = (nw - iv) * (a->cfact / (a->cfact + b->cfact));
+					tnh = (nh - ih) * (b->cfact / (b->cfact + c->cfact));
+					resize(a, nx + nw - tnw, ny, tnw - 2 * a->bw, nh - 2 * a->bw, False);
+					resize(b, nx, ny + nh - tnh, nw - iv - tnw - 2 * b->bw, tnh - 2 * b->bw, False);
+				} else {
+					tnw = (nw - iv) * (a->cfact / (a->cfact + b->cfact));
+					tnh = (nh - ih) * (b->cfact / (b->cfact + c->cfact));
+					resize(a, nx, ny, tnw - 2 * a->bw, nh - 2 * a->bw, False);
+					resize(b, nx + tnw + iv, ny, nw - iv - tnw - 2 * b->bw, tnh - 2 * b->bw, False);
+					nx += tnw + iv;
+					ny += tnh + ih;
+				}
+				nw -= tnw + iv;
+				nh -= tnh + ih;
+
+				if (j + 1 == ai + an) {
+					tnw = (nw - iv) * (c->cfact / (c->cfact + d->cfact));
+					resize(c, nx, ny, tnw - 2 * c->bw, nh - 2 * c->bw, False);
+					resize(d, nx + tnw + iv, ny, nw - iv - tnw - 2 * d->bw, nh - 2 * d->bw, False);
+					q = 0;
+					break;
+				}
+
+				clients[0] = c;
+				clients[1] = d;
+				q = 2;
+				break;
+			}
+			i++;
+		}
+	}
+}
+
+static void
 arrange_dwindle(Monitor *m, int x, int y, int h, int w, int ih, int iv, int n, int an, int ai)
 {
 	arrange_fibonacci(m, x, y, h, w, ih, iv, n, an, ai, 1);
 }
 
 static void
+arrange_dwindle_cfacts(Monitor *m, int x, int y, int h, int w, int ih, int iv, int n, int an, int ai)
+{
+	arrange_fibonacci_cfacts(m, x, y, h, w, ih, iv, n, an, ai, 1);
+}
+
+static void
 arrange_spiral(Monitor *m, int x, int y, int h, int w, int ih, int iv, int n, int an, int ai)
 {
 	arrange_fibonacci(m, x, y, h, w, ih, iv, n, an, ai, 0);
+}
+
+static void
+arrange_spiral_cfacts(Monitor *m, int x, int y, int h, int w, int ih, int iv, int n, int an, int ai)
+{
+	arrange_fibonacci_cfacts(m, x, y, h, w, ih, iv, n, an, ai, 0);
 }
 
 static void
@@ -737,6 +929,91 @@ arrange_tatami(Monitor *m, int x, int y, int h, int w, int ih, int iv, int n, in
 
 			resize(c, tnx, tny, tnw - 2 * c->bw, tnh - 2 * c->bw, False);
 			++i;
+		}
+	}
+}
+
+static void
+arrange_tatami_cfacts(Monitor *m, int x, int y, int h, int w, int ih, int iv, int n, int an, int ai)
+{
+	Client *clients[5] = { NULL, NULL, NULL, NULL, NULL };
+	unsigned int j, s, nx, ny, nw, nh, tnw, tmw, tnh, tmh, areas, mats, cats, nhrest;
+	Client *t, *a, *b, *c, *d, *e;
+
+	nx = x;
+	ny = y;
+	nw = w;
+	nh = h;
+
+	mats = an / 5;
+	cats = an % 5;
+
+	areas = mats + (cats > 0);
+	if (cats == 0)
+		cats = 5;
+	nh = (h - ih * (areas - 1)) / areas;
+	nhrest = (h - ih * (areas - 1)) % areas;
+
+	for (j = 0, s = 0, t = nexttiled(m->clients); t; t = nexttiled(t->next), j++) {
+		if (j >= ai && j < (ai + an)) {
+			clients[s] = t;
+			++s;
+
+			if (s < cats)
+				continue;
+
+			a = clients[0];
+			b = clients[1];
+			c = clients[2];
+			d = clients[3];
+			e = clients[4];
+			s = 0;
+
+			if (cats < 5) {
+				/* Arrange cats (all excess clients that can't be tiled as mats). Cats sleep on mats. */
+				switch (cats) {
+				case 1: // fill
+					resize(a, nx, ny, nw - 2 * a->bw, nh - 2 * a->bw, False);
+					break;
+				case 2: // up and down
+					tnh = (nh - ih) * (a->cfact / (a->cfact + b->cfact));
+					resize(a, nx, ny, nw - 2 * a->bw, tnh - 2 * a->bw, False);
+					resize(b, nx, ny + tnh + ih, nw - 2 * b->bw, (nh - tnh - ih) - 2 * b->bw, False);
+					break;
+				case 3: // bottom, up-left and up-right
+					tnw = (nw - iv) * (a->cfact / (a->cfact + b->cfact));
+					tnh = (nh - ih) * (c->cfact / (a->cfact + b->cfact + c->cfact));
+					resize(a, nx, ny, tnw - 2 * a->bw, nh - ih - tnh - 2 * a->bw, False);
+					resize(b, nx + tnw + iv, ny, nw - iv - tnw - 2 * b->bw, nh - ih - tnh - 2 * b->bw, False);
+					resize(c, nx, ny + nh - tnh, nw - 2 * c->bw, tnh - 2 * c->bw, False);
+					break;
+				case 4: // bottom, left, right and top
+					tnw = (nw - iv) * (b->cfact / (b->cfact + c->cfact));
+					tnh = (nh - 2 * ih) * (a->cfact / (a->cfact + b->cfact + c->cfact + d->cfact));
+					tmh = (nh - 2 * ih) * ((b->cfact + c->cfact) / (a->cfact + b->cfact + c->cfact + d->cfact));
+					resize(a, nx, ny, nw - 2 * a->bw, tnh - 2 * a->bw, False);
+					resize(b, nx, ny + tnh + iv, tnw - 2 * a->bw, tmh - 2 * a->bw, False);
+					resize(c, nx + iv + tnw, ny + tnh + iv, nw - iv - tnw - 2 * a->bw, tmh - 2 * a->bw, False);
+					resize(d, nx, ny + tnh + 2 * iv + tmh, nw - 2 * a->bw, nh - 2 * iv - tnh - tmh - 2 * a->bw, False);
+					break;
+				}
+
+				cats = 5;
+			} else {
+				/* Arrange mats. One mat is a collection of five clients arranged tatami style */
+				tnw = (nw - 2 * ih) * (a->cfact / (a->cfact + c->cfact + d->cfact));
+				tmw = (nw - 2 * ih) * (d->cfact / (a->cfact + c->cfact + d->cfact));
+				tnh = (nh - 2 * ih) * (e->cfact / (b->cfact + c->cfact + e->cfact));
+				tmh = (nh - 2 * ih) * (b->cfact / (b->cfact + c->cfact + e->cfact));
+				resize(a, nx, ny, tnw - 2 * a->bw, nh - tnh - ih - 2 * a->bw, False);
+				resize(b, nx + tnw + iv, ny, nw - iv - tnw - 2 * a->bw, tmh - 2 * a->bw, False);
+				resize(c, nx + tnw + iv, ny + tmh + ih, nw - tnw - tmw - 2 * iv - 2 * c->bw, nh - tnh - tmh - 2 * ih - 2 * c->bw, False);
+				resize(d, nx + nw - tmw, ny + tmh + ih, tmw - 2 * d->bw, nh - tmh - ih - 2 * d->bw, False);
+				resize(e, nx, ny + nh - tnh, nw - tmw - iv - 2 * e->bw, tnh - 2 * e->bw, False);
+			}
+
+			ny += nh + ih + (nhrest > 0 ? 1 : 0);
+			--nhrest;
 		}
 	}
 }

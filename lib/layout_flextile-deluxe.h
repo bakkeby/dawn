@@ -32,13 +32,17 @@ static void arrange_left_to_right(Monitor *m, int ax, int ay, int ah, int aw, in
 static void arrange_top_to_bottom(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
 static void arrange_monocle(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
 static void arrange_gapplessgrid(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
+static void arrange_gapplessgrid_cfacts(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
 static void arrange_gapplessgrid_alt1(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
 static void arrange_gapplessgrid_alt2(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
 static void arrange_gridmode(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
 static void arrange_horizgrid(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
 static void arrange_dwindle(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
+static void arrange_dwindle_cfacts(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
 static void arrange_spiral(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
+static void arrange_spiral_cfacts(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
 static void arrange_tatami(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
+static void arrange_tatami_cfacts(Monitor *m, int ax, int ay, int ah, int aw, int ih, int iv, int n, int an, int ai);
 
 /* Layout arrangements */
 enum {
@@ -80,17 +84,21 @@ static char layoutsymb[] = {
 
 /* Tile arrangements */
 enum {
-	TOP_TO_BOTTOM,     // clients are arranged vertically
-	LEFT_TO_RIGHT,     // clients are arranged horizontally
-	MONOCLE,           // clients are arranged in deck / monocle mode
-	GAPPLESSGRID,      // clients are arranged in a gappless grid (original formula)
-	GAPPLESSGRID_ALT1, // clients are arranged in a gappless grid (alt. 1, fills rows first)
-	GAPPLESSGRID_ALT2, // clients are arranged in a gappless grid (alt. 2, fills columns first)
-	GRIDMODE,          // clients are arranged in a grid
-	HORIZGRID,         // clients are arranged in a horizontal grid
-	DWINDLE,           // clients are arranged in fibonacci dwindle mode
-	SPIRAL,            // clients are arranged in fibonacci spiral mode
-	TATAMI,            // clients are arranged as tatami mats
+	TOP_TO_BOTTOM,       // clients are arranged vertically
+	LEFT_TO_RIGHT,       // clients are arranged horizontally
+	MONOCLE,             // clients are arranged in deck / monocle mode
+	GAPPLESSGRID,        // clients are arranged in a gappless grid (original formula)
+	GAPPLESSGRID_CFACTS, // clients are arranged in a gappless grid that takes cfacts into account
+	GAPPLESSGRID_ALT1,   // clients are arranged in a gappless grid (alt. 1, fills rows first)
+	GAPPLESSGRID_ALT2,   // clients are arranged in a gappless grid (alt. 2, fills columns first)
+	GRIDMODE,            // clients are arranged in a grid
+	HORIZGRID,           // clients are arranged in a horizontal grid
+	DWINDLE,             // clients are arranged in fibonacci dwindle mode
+	DWINDLE_CFACTS,      // clients are arranged in fibonacci dwindle mode and takes cfacts into account
+	SPIRAL,              // clients are arranged in fibonacci spiral mode
+	SPIRAL_CFACTS,       // clients are arranged in fibonacci spiral mode and takes cfacts into account
+	TATAMI,              // clients are arranged as tatami mats
+	TATAMI_CFACTS,       // clients are arranged as tatami mats that takes cfacts into account
 	AXIS_LAST,
 };
 
@@ -99,11 +107,15 @@ static char tilesymb[] = {
 	124, // "|",
 	68,  // "D",
 	71,  // "G",
+	71,  // "G",
 	49,  // "1",
 	50,  // "2"
 	35,  // "#",
 	126, // "~",
 	92,  // "\\",
+	92,  // "\\",
 	64,  // "@",
+	64,  // "@",
+	84,  // "T",
 	84,  // "T",
 };
