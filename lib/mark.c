@@ -103,6 +103,8 @@ void
 togglemark(const Arg *arg)
 {
 	Client *c = CLIENT;
+	if (!c)
+		return;
 	if (ISMARKED(c))
 		unmarkclient(c);
 	else
