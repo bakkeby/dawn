@@ -69,7 +69,7 @@ static unsigned long functionality = 0
 //	|ViewOnTag // follow a window to the tag it is being moved to
 //	|Xresources // xrdb patch
 //	|CenterSizeHintsClients // center tiled clients subject to size hints within their tiled area
-//	|ResizeHints // if enabled then dusk will respect size hints in tiled resizals
+//	|ResizeHints // if enabled then dawn will respect size hints in tiled resizals
 //	|AutoHideScratchpads // automatically hide open scratchpads when moving to another tag
 //	|Debug // enables additional debug output
 //	|Desktop // tags change in unison giving the appearance of the workspace spanning all monitors like traditionl desktop environments
