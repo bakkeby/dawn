@@ -2091,7 +2091,7 @@ motionnotify(XEvent *e)
 void
 moveorplace(const Arg *arg)
 {
-	if (!selmon->layout || ISFLOATING(selmon->sel))
+	if (!selmon->layout || (selmon->sel && ISFLOATING(selmon->sel)))
 		movemouse(arg);
 	else
 		placemouse(arg);
