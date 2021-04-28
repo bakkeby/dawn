@@ -858,7 +858,9 @@ cleanup(void)
 	XUngrabKey(dpy, AnyKey, AnyModifier, root);
 	while (mons)
 		cleanupmon(mons);
-	if (enabled(Systray) && systray) {
+	if (systray) {
+		while (systray->icons)
+			removesystrayicon(systray->icons);
 		if (systray->win) {
 			XUnmapWindow(dpy, systray->win);
 			XDestroyWindow(dpy, systray->win);
