@@ -51,9 +51,13 @@ install: all
 	mkdir -p ${DESTDIR}${MANPREFIX}/man1
 	sed "s/VERSION/${VERSION}/g" < dawn.1 > ${DESTDIR}${MANPREFIX}/man1/dawn.1
 	chmod 644 ${DESTDIR}${MANPREFIX}/man1/dawn.1
+	mkdir -p /usr/share/xsessions
+	cp -n dawn.desktop /usr/share/xsessions/
+	chmod 644 /usr/share/xsessions/dawn.desktop
 
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/dawn\
-		${DESTDIR}${MANPREFIX}/man1/dawn.1
+		${DESTDIR}${MANPREFIX}/man1/dawn.1\
+		/usr/share/xsessions/dawn.desktop
 
 .PHONY: all options clean dist install uninstall
