@@ -414,7 +414,7 @@ typedef struct {
 	const char scratchkey;
 } Rule;
 
-#define RULE(...) { .monitor = -1, ##__VA_ARGS__ },
+#define RULE(...) { .monitor = -1, __VA_ARGS__ },
 
 typedef struct {
 	int monitor;
