@@ -2,7 +2,7 @@ void
 transfer(const Arg *arg)
 {
 	Client *c, *mtail = selmon->clients, *stail = NULL, *insertafter;
-	int transfertostack = 0, i, nmasterclients;
+	int transfertostack = 0, i, nmasterclients = 0;
 
 	for (i = 0, c = selmon->clients; c; c = c->next) {
 		if (!ISVISIBLE(c) || ISFLOATING(c)) continue;

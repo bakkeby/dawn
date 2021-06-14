@@ -6,7 +6,8 @@ getdwmblockspid()
 {
 	char buf[16];
 	FILE *fp = popen("pidof -s dwmblocks", "r");
-	if (fgets(buf, sizeof(buf), fp));
+	if (fgets(buf, sizeof(buf), fp))
+		;
 	pid_t pid = strtoul(buf, NULL, 10);
 	pclose(fp);
 	dwmblockspid = pid;

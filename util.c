@@ -40,7 +40,7 @@ die(const char *fmt, ...) {
 int
 enabled(const long functionality)
 {
-	return settings & functionality;
+	return (settings & functionality) > 0;
 }
 
 int

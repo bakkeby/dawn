@@ -1120,7 +1120,7 @@ void
 rotatelayoutaxis(const Arg *arg)
 {
 	int incr = (arg->i > 0 ? 1 : -1);
-	int axis = abs(arg->i) - 1;
+	int axis = labs(arg->i) - 1;
 
 	if (!selmon->layout->arrange)
 		return;
