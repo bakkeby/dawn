@@ -53,7 +53,7 @@ typedef enum IPCMessageType {
   IPC_TYPE_GET_MONITORS = 1,
   IPC_TYPE_GET_TAGS = 2,
   IPC_TYPE_GET_LAYOUTS = 3,
-  IPC_TYPE_GET_DWM_CLIENT = 4,
+  IPC_TYPE_GET_CLIENT = 4,
   IPC_TYPE_SUBSCRIBE = 5,
   IPC_TYPE_EVENT = 6,
   IPC_TYPE_GET_SETTINGS = 7,
@@ -389,7 +389,7 @@ get_layouts()
 }
 
 static int
-get_dwm_client(Window win)
+get_client(Window win)
 {
   const unsigned char *msg;
   size_t msg_size;
@@ -408,7 +408,7 @@ get_dwm_client(Window win)
 
   yajl_gen_get_buf(gen, &msg, &msg_size);
 
-  send_message(IPC_TYPE_GET_DWM_CLIENT, msg_size, (uint8_t *)msg);
+  send_message(IPC_TYPE_GET_CLIENT, msg_size, (uint8_t *)msg);
 
   print_socket_reply();
 
@@ -482,7 +482,7 @@ print_usage(const char *name)
   puts("");
   puts("  get_layouts                     Get list of layouts");
   puts("");
-  puts("  get_dwm_client <window_id>      Get dwm client proprties");
+  puts("  get_client <window_id>          Get client proprties");
   puts("");
   puts("  subscribe [events...]           Subscribe to specified events");
   puts("                                  Options: " IPC_EVENT_TAG_CHANGE ",");
@@ -536,11 +536,11 @@ main(int argc, char *argv[])
     get_settings();
   } else if (strcmp(argv[i], "get_layouts") == 0) {
     get_layouts();
-  } else if (strcmp(argv[i], "get_dwm_client") == 0) {
+  } else if (strcmp(argv[i], "get_client") == 0) {
     if (++i < argc) {
       if (is_unsigned_int(argv[i])) {
         Window win = atol(argv[i]);
-        get_dwm_client(win);
+        get_client(win);
       } else
         usage_error(prog_name, "Expected unsigned integer argument");
     } else

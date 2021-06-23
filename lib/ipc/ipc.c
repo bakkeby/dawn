@@ -541,14 +541,14 @@ ipc_parse_subscribe(const char *msg, IPCSubscriptionAction *subscribe,
 }
 
 /**
- * Parse an IPC_TYPE_GET_DWM_CLIENT message from a client. This function
+ * Parse an IPC_TYPE_GET_CLIENT message from a client. This function
  * extracts the window id from the message.
  *
  * Returns 0 if message was successfully parsed
  * Returns -1 otherwise
  */
 static int
-ipc_parse_get_dwm_client(const char *msg, Window *win)
+ipc_parse_get_client(const char *msg, Window *win)
 {
 	char error_buffer[100];
 
@@ -700,7 +700,7 @@ ipc_get_layouts(IPCClient *c, const Layout layouts[], const int layouts_len)
 }
 
 /**
- * Called when an IPC_TYPE_GET_DWM_CLIENT message is received from a client. It
+ * Called when an IPC_TYPE_GET_CLIENT message is received from a client. It
  * prepares a JSON reply with the properties of the client with the specified
  * window XID.
  *
@@ -709,11 +709,11 @@ ipc_get_layouts(IPCClient *c, const Layout layouts[], const int layouts_len)
  * Returns -1 if the message could not be parsed
  */
 static int
-ipc_get_dwm_client(IPCClient *ipc_client, const char *msg, const Monitor *mons)
+ipc_get_client(IPCClient *ipc_client, const char *msg, const Monitor *mons)
 {
 	Window win;
 
-	if (ipc_parse_get_dwm_client(msg, &win) < 0) return -1;
+	if (ipc_parse_get_client(msg, &win) < 0) return -1;
 
 	// Find client with specified window XID
 	for (const Monitor *m = mons; m; m = m->next)
@@ -724,13 +724,12 @@ ipc_get_dwm_client(IPCClient *ipc_client, const char *msg, const Monitor *mons)
 
 				dump_client(gen, c);
 
-				ipc_reply_prepare_send_message(gen, ipc_client,
-																			 IPC_TYPE_GET_DWM_CLIENT);
+				ipc_reply_prepare_send_message(gen, ipc_client, IPC_TYPE_GET_CLIENT);
 
 				return 0;
 			}
 
-	ipc_prepare_reply_failure(ipc_client, IPC_TYPE_GET_DWM_CLIENT,
+	ipc_prepare_reply_failure(ipc_client, IPC_TYPE_GET_CLIENT,
 														"Client with window id %d not found", win);
 	return -1;
 }
@@ -831,7 +830,7 @@ ipc_get_sock_fd()
 }
 
 IPCClient *
-ipc_get_client(int fd)
+ipc_get_ipc_client(int fd)
 {
 	return ipc_list_get_client(ipc_clients, fd);
 }
@@ -839,7 +838,7 @@ ipc_get_client(int fd)
 int
 ipc_is_client_registered(int fd)
 {
-	return (ipc_get_client(fd) != NULL);
+	return (ipc_get_ipc_client(fd) != NULL);
 }
 
 int
@@ -1163,7 +1162,7 @@ ipc_handle_client_epoll_event(struct epoll_event *ev, Monitor *mons,
 															const Layout *layouts, const int layouts_len)
 {
 	int fd = ev->data.fd;
-	IPCClient *c = ipc_get_client(fd);
+	IPCClient *c = ipc_get_ipc_client(fd);
 
 	if (ev->events & EPOLLHUP) {
 		DEBUG("EPOLLHUP received from client at fd %d\n", fd);
@@ -1190,8 +1189,8 @@ ipc_handle_client_epoll_event(struct epoll_event *ev, Monitor *mons,
 		else if (msg_type == IPC_TYPE_RUN_COMMAND) {
 			if (ipc_run_command(c, msg) < 0) return -1;
 			ipc_send_events(mons, lastselmon, selmon);
-		} else if (msg_type == IPC_TYPE_GET_DWM_CLIENT) {
-			if (ipc_get_dwm_client(c, msg, mons) < 0) return -1;
+		} else if (msg_type == IPC_TYPE_GET_CLIENT) {
+			if (ipc_get_client(c, msg, mons) < 0) return -1;
 		} else if (msg_type == IPC_TYPE_SUBSCRIBE) {
 			if (ipc_subscribe(c, msg) < 0) return -1;
 		} else {
