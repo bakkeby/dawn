@@ -48,8 +48,8 @@ static const unsigned long
 	FlagPlaceholder549755813888 = 0x8000000000,
 	FlagPlaceholder1099511627776 = 0x10000000000,
 	FlagPlaceholder2199023255552 = 0x20000000000,
-	FlagPlaceholder4398046511104 = 0x40000000000,
-	FlagPlaceholder8796093022208 = 0x80000000000,
+	Lower = 0x40000000000, // place this window below all other windows, used when window is unmanaged
+	Raise = 0x80000000000, // place this window above all other windows, used when window is unmanaged
 	FlagPlaceholder17592186044416 = 0x100000000000,
 	FlagPlaceholder35184372088832 = 0x200000000000,
 	FlagPlaceholder70368744177664 = 0x400000000000,
@@ -113,6 +113,8 @@ static const unsigned long
 #define REVERTTAG(C) (C->flags & RevertTag)
 #define MOVERESIZE(C) (C->flags & MoveResize)
 #define MOVEPLACE(C) (C->flags & MovePlace)
+#define LOWER(C) (C->flags & Lower)
+#define RAISE(C) (C->flags & Raise)
 
 #define WASFLOATING(C) (C->prevflags & Floating)
 #define WASFAKEFULLSCREEN(C) (C->prevflags & FakeFullScreen)

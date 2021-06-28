@@ -118,10 +118,10 @@ getflagbyname(const char *name)
 		return FlagPlaceholder1099511627776;
 	else if (strcmp(name, "FlagPlaceholder2199023255552") == 0)
 		return FlagPlaceholder2199023255552;
-	else if (strcmp(name, "FlagPlaceholder4398046511104") == 0)
-		return FlagPlaceholder4398046511104;
-	else if (strcmp(name, "FlagPlaceholder8796093022208") == 0)
-		return FlagPlaceholder8796093022208;
+	else if (strcmp(name, "Lower") == 0)
+		return Lower;
+	else if (strcmp(name, "Raise") == 0)
+		return Raise;
 	else if (strcmp(name, "FlagPlaceholder17592186044416") == 0)
 		return FlagPlaceholder17592186044416;
 	else if (strcmp(name, "FlagPlaceholder35184372088832") == 0)

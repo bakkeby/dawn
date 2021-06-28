@@ -1902,7 +1902,10 @@ manage(Window w, XWindowAttributes *wa)
 
 	if (ISUNMANAGED(c)) {
 		XMapWindow(dpy, c->win);
-		XLowerWindow(dpy, c->win);
+		if (LOWER(c))
+			XLowerWindow(dpy, c->win);
+		else if (RAISE(c))
+			XRaiseWindow(dpy, c->win);
 		free(c);
 		return;
 	}
