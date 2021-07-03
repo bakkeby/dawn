@@ -550,8 +550,8 @@ static Key keys[] = {
 	{ MODKEY,                       XK_Tab,          shiftviewclients,       { .i = +1 } },
 	{ MODKEY,                       XK_z,            showhideclient,         {0} },
 	{ MODKEY,                       XK_q,            killclient,             {0} },
-	{ MODKEY|Shift,                 XK_q,            quit,                   {1} }, // restart
-	{ MODKEY|Ctrl|Alt,              XK_q,            quit,                   {0} }, // exit dusk
+	{ MODKEY|Shift,                 XK_q,            restart,                {0} },
+	{ MODKEY|Ctrl|Alt,              XK_q,            quit,                   {0} },
 
 	{ MODKEY,                       XK_a,            markall,                {0} }, // marks all clients on the selected tag
 	{ MODKEY|Ctrl,                  XK_a,            markall,                {1} }, // marks all floating clients on the selected tag
@@ -749,7 +749,8 @@ static IPCCommand ipccommands[] = {
 	IPCCOMMAND( rotatestack, 1, {ARG_TYPE_SINT} ),
 	IPCCOMMAND( pushdown, 1, {ARG_TYPE_NONE} ),
 	IPCCOMMAND( pushup, 1, {ARG_TYPE_NONE} ),
-	IPCCOMMAND( quit, 1, {ARG_TYPE_SINT} ), // 0 = quit, 1 = restart
+	IPCCOMMAND( quit, 1, {ARG_TYPE_NONE} ),
+	IPCCOMMAND( restart, 1, {ARG_TYPE_NONE} ),
 	IPCCOMMAND( removescratch, 1, {ARG_TYPE_SINT} ),
 	IPCCOMMAND( rioresize, 1, {ARG_TYPE_NONE} ),
 	IPCCOMMAND( setborderpx, 1, {ARG_TYPE_SINT} ),

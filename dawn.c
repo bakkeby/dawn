@@ -476,6 +476,7 @@ static Client *prevtiled(Client *c);
 static void placemouse(const Arg *arg);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
+static void restart(const Arg *arg);
 static void quit(const Arg *arg);
 static void readclientstackingorder(void);
 static Client *recttoclient(int x, int y, int w, int h, int include_floating);
@@ -2398,12 +2399,20 @@ propertynotify(XEvent *e)
 }
 
 void
-quit(const Arg *arg)
+restart(const Arg *arg)
 {
 	Monitor *m;
+	restartsig = 1;
+	quit(arg);
+
+	for (m = mons; m; m = m->next)
+		persistmonitorstate(m);
+}
+
+void
+quit(const Arg *arg)
+{
 	size_t i;
-	if (arg->i)
-		restart = 1;
 	running = 0;
 
 	/* kill child processes */
@@ -2413,9 +2422,6 @@ quit(const Arg *arg)
 			waitpid(autostart_pids[i], NULL, 0);
 		}
 	}
-
-	for (m = mons; m; m = m->next)
-		persistmonitorstate(m);
 }
 
 /* This reads the stacking order on the X server side and updates the client
@@ -4080,7 +4086,7 @@ main(int argc, char *argv[])
 #endif /* __OpenBSD__ */
 	scan();
 	run();
-	if (restart)
+	if (restartsig)
 		execvp(argv[0], argv);
 	cleanup();
 	XCloseDisplay(dpy);
