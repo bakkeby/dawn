@@ -494,7 +494,7 @@ static const Layout layouts[] = {
 	{ MOD, XK_z, ACTION, {.i = -1 } },
 
 /* helper for spawning shell commands in the pre dwm-5.0 fashion */
-#define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
+#define SHCMD(cmd) { .v = (const char*[]){ NULL, "/bin/sh", "-c", cmd, NULL } }
 
 /* Scratch/Spawn commands:     scratchkey, command, argument, argument, ..., NULL */
 static const char *spcmd1[] = {"w", "st", "-n", "spterm (w)", "-g", "120x34", NULL };
