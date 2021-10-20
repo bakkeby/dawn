@@ -70,7 +70,7 @@ void
 tagandviewtoleft(const Arg *arg)
 {
 	Monitor *m = selmon;
-	if (__builtin_popcount(m->tags & TAGMASK) == 1 && m->tags > 1) {
+	if (m->sel != NULL && __builtin_popcount(m->tags & TAGMASK) == 1 && m->tags > 1) {
 		selmon->sel->tags >>= 1;
 		if (enabled(Desktop)) {
 			for (m = mons; m; m = m->next) {
@@ -90,7 +90,7 @@ void
 tagandviewtoright(const Arg *arg)
 {
 	Monitor *m = selmon;
-	if (__builtin_popcount(m->tags & TAGMASK) == 1	&& m->tags & (TAGMASK >> 1)) {
+	if (m->sel != NULL && __builtin_popcount(m->tags & TAGMASK) == 1	&& m->tags & (TAGMASK >> 1)) {
 		selmon->sel->tags <<= 1;
 		if (enabled(Desktop)) {
 			for (m = mons; m; m = m->next) {
