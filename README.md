@@ -2,6 +2,8 @@ Please ignore. This is just my personal build of what once was dwm.
 
 If you are looking for dwm then you may want to check out [dwm-flexipatch](https://github.com/bakkeby/dwm-flexipatch/) instead. Or just build your own [from scratch](https://dwm.suckless.org/).
 
+Discontinued in favour of [dusk](https://github.com/bakkeby/dusk). This repository is now archived.
+
 ---
 
 ![https://raw.githubusercontent.com/wiki/bakkeby/dwm-vanitygaps/dawn_scr01.png](https://raw.githubusercontent.com/wiki/bakkeby/dwm-vanitygaps/dawn_scr01.png)
